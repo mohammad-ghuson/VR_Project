@@ -1,0 +1,35 @@
+You are helping me develop a Unity project for a "Swinging Paint Bucket Simulation".
+
+I will work in phases and I want step-by-step validation after each phase.
+
+We MUST follow this development plan:
+
+PHASE 1 (CURRENT FOCUS):
+- Implement realistic pendulum motion for a bucket (swinging bucket)
+- The motion must be physically plausible and parameterized:
+  - string length
+  - initial angle
+  - gravity influence (optional simplified model)
+  - damping (air resistance optional)
+- No painting logic yet
+
+After Phase 1:
+- I will test in Unity
+- You must help me verify correctness and fix issues
+
+PHASE 2:
+- Add circular motion mode toggle (comparison with pendulum)
+
+PHASE 3:
+- Add paint drop simulation
+
+PHASE 4:
+- Surface drawing system
+
+IMPORTANT RULES:
+- Always keep code modular and clean
+- Always explain what changed
+- Always provide test checklist after each step
+- Never jump to full system at once
+
+Start by reviewing my current Unity script for bucket motion and improve Phase 1 only.
