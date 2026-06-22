@@ -45,6 +45,11 @@ public class SphFluid : MonoBehaviour
     public float viscosity = 5f;             // mu: low = watery, high = thick paint (Step D)
     public float maxSpeed = 10f;             // safety clamp to prevent blow-ups
 
+    [Header("Outflow (M3)")]
+    public bool holeOpen = false;            // open the bottom hole so paint can drain
+    public float holeDiameter = 0.2f;        // world-units diameter of the bottom hole
+    public float despawnBelowY = -10f;       // escaped paint falling below this is removed (no canvas yet)
+
     [Header("Display (Step F)")]
     public bool showStats = true;            // on-screen FPS + particle count
 
@@ -53,9 +58,17 @@ public class SphFluid : MonoBehaviour
     float[] density;
     float[] pressure;
     Matrix4x4[] matrices;                     // per-particle transforms for instanced draw
+    bool[] escaped;                           // true once a particle drained out the hole
+    bool[] dead;                              // true once below the despawn plane (frozen + hidden)
     float particleDiameter;
     float fpsSmooth;
     float accumulator;
+
+    // Flow measurement (M3.3)
+    int drainedCount;          // total particles that have drained out the hole
+    int lastDrained;
+    int inBucketCount;         // particles still inside the bucket
+    float flowRateSmooth;      // drained particles per second (smoothed)
 
     // Moving-container state (Step E). The cylinder follows the bucket each frame.
     Mesh particleMesh;
@@ -114,8 +127,25 @@ public class SphFluid : MonoBehaviour
         if (steps == maxSubSteps) accumulator = 0f;
 
         RenderParticles();
+        MeasureFlow(Time.deltaTime);
 
         if (logNeighborStats && (++frameCounter % 60 == 0)) LogNeighborStats();
+    }
+
+    // M3.3: measure outflow so we can see it respond to hole size / viscosity / bucket speed.
+    void MeasureFlow(float dt)
+    {
+        int inside = 0;
+        for (int i = 0; i < positions.Length; i++)
+            if (!escaped[i] && !dead[i]) inside++;
+        inBucketCount = inside;
+
+        if (dt > 1e-5f)
+        {
+            float instRate = (drainedCount - lastDrained) / dt;
+            flowRateSmooth = Mathf.Lerp(flowRateSmooth, instRate, 0.1f);
+        }
+        lastDrained = drainedCount;
     }
 
     // Step F: draw all particles in one instanced call (no GameObject per particle).
@@ -124,7 +154,9 @@ public class SphFluid : MonoBehaviour
         if (positions == null) return;
         Vector3 scale = Vector3.one * particleDiameter;
         for (int i = 0; i < positions.Length; i++)
-            matrices[i] = Matrix4x4.TRS(positions[i], Quaternion.identity, scale);
+            matrices[i] = dead[i]
+                ? Matrix4x4.TRS(positions[i], Quaternion.identity, Vector3.zero) // hidden
+                : Matrix4x4.TRS(positions[i], Quaternion.identity, scale);
 
         var rp = new RenderParams(particleMaterial)
         {
@@ -139,7 +171,8 @@ public class SphFluid : MonoBehaviour
         if (!showStats) return;
         fpsSmooth = Mathf.Lerp(fpsSmooth, 1f / Mathf.Max(Time.deltaTime, 1e-5f), 0.1f);
         int n = positions != null ? positions.Length : 0;
-        GUI.Label(new Rect(12, 10, 360, 24), $"SPH   particles: {n}    FPS: {fpsSmooth:F0}");
+        GUI.Label(new Rect(12, 10, 520, 24),
+            $"SPH  total:{n}  in-bucket:{inBucketCount}  drained:{drainedCount}  flow:{flowRateSmooth:F0}/s   FPS:{fpsSmooth:F0}");
     }
 
     // Step E: place the cylinder at the bucket's current transform and estimate the
@@ -188,6 +221,8 @@ public class SphFluid : MonoBehaviour
 
         for (int i = 0; i < positions.Length; i++)
         {
+            if (dead[i]) continue;
+
             // Pressure force (repels overlapping particles -> incompressibility)
             // Viscosity force (smooths velocity vs neighbors -> cohesive, paint-like)
             Vector3 fPress = Vector3.zero;
@@ -220,7 +255,9 @@ public class SphFluid : MonoBehaviour
                 velocities[i] = velocities[i].normalized * maxSpeed;
 
             positions[i] += velocities[i] * dt;
-            ResolveBoundary(ref positions[i], ref velocities[i]);
+
+            if (!escaped[i]) ResolveBoundary(i, ref positions[i], ref velocities[i]);
+            if (escaped[i] && positions[i].y < despawnBelowY) dead[i] = true;
         }
     }
 
@@ -275,34 +312,49 @@ public class SphFluid : MonoBehaviour
     // Reflect particles off an ORIENTED cylinder (floor closed, top open) that follows
     // the bucket. Velocity is reflected relative to the moving wall, so a swinging
     // bucket drags the fluid and produces sloshing.
-    void ResolveBoundary(ref Vector3 p, ref Vector3 v)
+    void ResolveBoundary(int i, ref Vector3 p, ref Vector3 v)
     {
         float r = particleRadius;
         Vector3 up = worldUp;
 
-        // Side wall (radial)
         Vector3 rel = p - worldContainerCenter;
         float axial = Vector3.Dot(rel, up);
         Vector3 radialVec = rel - axial * up;
         float radial = radialVec.magnitude;
         float maxR = containerRadius - r;
-        if (radial > maxR && radial > 1e-6f)
+
+        // Side wall — only where the bucket walls actually are (within its height).
+        // Below the floor (drained through the hole) there is no wall, so paint falls free.
+        if (axial >= -containerHalfHeight && axial <= containerHalfHeight
+            && radial > maxR && radial > 1e-6f)
         {
             Vector3 inward = -(radialVec / radial);
             p += inward * (radial - maxR);
             ReflectVel(ref v, p, inward);
+
+            rel = p - worldContainerCenter;
+            axial = Vector3.Dot(rel, up);
+            radialVec = rel - axial * up;
+            radial = radialVec.magnitude;
         }
 
-        // Bottom (closed)
-        rel = p - worldContainerCenter;
-        axial = Vector3.Dot(rel, up);
+        // Bottom — closed, EXCEPT a hole at the center the paint can drain through.
         float minAxial = -containerHalfHeight + r;
         if (axial < minAxial)
         {
-            p += up * (minAxial - axial);
-            ReflectVel(ref v, p, up);
+            bool overHole = holeOpen && radial < holeDiameter * 0.5f;
+            if (!overHole)
+            {
+                p += up * (minAxial - axial);
+                ReflectVel(ref v, p, up);
+            }
+            else
+            {
+                escaped[i] = true; // drained through the hole -> now free-falling paint
+                drainedCount++;
+            }
         }
-        // Top is open: particles may leave from the opening (used later for outflow).
+        // Top is open.
     }
 
     // Reflect velocity about 'inwardNormal' relative to the wall's velocity at point p.
@@ -334,6 +386,7 @@ public class SphFluid : MonoBehaviour
 
         for (int i = 0; i < positions.Length; i++)
         {
+            if (dead != null && dead[i]) continue; // dead particles leave the simulation
             Vector3Int c = CellOf(positions[i]);
             if (!grid.TryGetValue(c, out var list))
             {
@@ -421,6 +474,8 @@ public class SphFluid : MonoBehaviour
         density = new float[particleCount];
         pressure = new float[particleCount];
         matrices = new Matrix4x4[particleCount];
+        escaped = new bool[particleCount];
+        dead = new bool[particleCount];
 
         if (particleMaterial != null) particleMaterial.enableInstancing = true;
         particleDiameter = particleRadius * 2f * particleVisualScale;
