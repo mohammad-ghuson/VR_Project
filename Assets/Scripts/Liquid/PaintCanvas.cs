@@ -68,6 +68,21 @@ public class PaintCanvas : MonoBehaviour
         hasLast = false;
     }
 
+    // M5.5 - Save the current artwork as a PNG file and return its full path.
+    public string SavePng()
+    {
+        if (tex == null) return null;
+        byte[] bytes = tex.EncodeToPNG();
+        // Save next to the project (Assets/..), so it's easy to find: <Project>/SavedPaintings.
+        string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "SavedPaintings"));
+        System.IO.Directory.CreateDirectory(dir);
+        string path = System.IO.Path.Combine(dir, "painting_" +
+            System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".png");
+        System.IO.File.WriteAllBytes(path, bytes);
+        Debug.Log("[PaintCanvas] Saved painting to: " + path);
+        return path;
+    }
+
     // Try to paint at a world point. Returns true (and stamps) if the point reached the
     // canvas plane (within hitDist) AND lies within the canvas bounds. Used by SphFluid.
     public bool TryPaint(Vector3 worldPoint, float hitDist, Color color, float splatWorldRadius)

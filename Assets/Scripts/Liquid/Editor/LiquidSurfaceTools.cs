@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
@@ -429,6 +431,431 @@ public static class LiquidSurfaceTools
         EditorUtility.SetDirty(bucketFluid);
         EditorSceneManager.MarkSceneDirty(bucketFluid.gameObject.scene);
         Debug.Log("[Canvas][M4.2] Linked bucket paint -> canvas, hole opened. Press Play and watch marks appear.", bucketFluid);
+    }
+
+    [MenuItem("Tools/Liquid/UI - M5.1 Create Control Panel")]
+    static void CreateControlPanel()
+    {
+        if (GameObject.Find("ControlPanelUI") != null)
+        {
+            Debug.LogWarning("[UI] 'ControlPanelUI' already exists.");
+            Selection.activeObject = GameObject.Find("ControlPanelUI");
+            return;
+        }
+
+        // An EventSystem is required for any UI interaction (clicks/drags on sliders).
+        EnsureEventSystem();
+
+        // Root Canvas (screen-space overlay for now; switching to World Space later = one field).
+        var canvasGO = new GameObject("ControlPanelUI", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Undo.RegisterCreatedObjectUndo(canvasGO, "Create Control Panel");
+        var canvas = canvasGO.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var scaler = canvasGO.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        // A semi-transparent panel anchored to the top-left, ready to receive controls in M5.2.
+        var panelGO = new GameObject("Panel", typeof(Image));
+        Undo.SetTransformParent(panelGO.transform, canvasGO.transform, "Parent Panel");
+        var panelRT = panelGO.GetComponent<RectTransform>();
+        panelRT.anchorMin = new Vector2(0f, 1f);
+        panelRT.anchorMax = new Vector2(0f, 1f);
+        panelRT.pivot = new Vector2(0f, 1f);
+        panelRT.anchoredPosition = new Vector2(20f, -20f);
+        panelRT.sizeDelta = new Vector2(360f, 520f);
+        panelGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
+
+        // The binding script, with references auto-filled from the scene.
+        var ctrl = canvasGO.AddComponent<UIControlPanel>();
+        ctrl.bucket = Object.FindFirstObjectByType<Bucket>();
+        ctrl.canvas = Object.FindFirstObjectByType<PaintCanvas>();
+        foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+            if (f.containerShape == SphFluid.ContainerShape.Cylinder) { ctrl.bucketFluid = f; break; }
+
+        Selection.activeObject = canvasGO;
+        EditorSceneManager.MarkSceneDirty(canvasGO.scene);
+        Debug.Log("[UI][M5.1] Created 'ControlPanelUI' (Canvas + empty Panel). " +
+                  "Press Play: an empty dark panel should appear top-left. M5.2 fills it with sliders.", canvasGO);
+    }
+
+    [MenuItem("Tools/Liquid/UI - Fix EventSystem Input Module")]
+    static void FixEventSystemInputModule()
+    {
+        var es = Object.FindFirstObjectByType<EventSystem>();
+        if (es == null) { Debug.LogWarning("[UI] No EventSystem in the scene. Run M5.1 first."); return; }
+        ApplyCorrectInputModule(es.gameObject);
+        Selection.activeObject = es.gameObject;
+        EditorSceneManager.MarkSceneDirty(es.gameObject.scene);
+    }
+
+    // Create an EventSystem (if missing) with the input module that matches the project's
+    // active input handling. Projects using the new Input System package must NOT use the
+    // legacy StandaloneInputModule (it reads UnityEngine.Input and throws every frame).
+    static void EnsureEventSystem()
+    {
+        var existing = Object.FindFirstObjectByType<EventSystem>();
+        if (existing != null) { ApplyCorrectInputModule(existing.gameObject); return; }
+
+        var es = new GameObject("EventSystem", typeof(EventSystem));
+        Undo.RegisterCreatedObjectUndo(es, "Create EventSystem");
+        ApplyCorrectInputModule(es);
+    }
+
+    // Pick the right UI input module without a hard compile-time dependency on the
+    // Input System package (resolved by name, so this file still compiles if it's absent).
+    static void ApplyCorrectInputModule(GameObject go)
+    {
+        var newModuleType = System.Type.GetType(
+            "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+
+        if (newModuleType != null)
+        {
+            // Remove the legacy module if present, then ensure the new one exists.
+            var legacy = go.GetComponent<StandaloneInputModule>();
+            if (legacy != null) Undo.DestroyObjectImmediate(legacy);
+            if (go.GetComponent(newModuleType) == null)
+                Undo.AddComponent(go, newModuleType);
+            Debug.Log("[UI] EventSystem uses InputSystemUIInputModule (new Input System).", go);
+        }
+        else if (go.GetComponent<StandaloneInputModule>() == null)
+        {
+            Undo.AddComponent<StandaloneInputModule>(go);
+            Debug.Log("[UI] EventSystem uses StandaloneInputModule (legacy input).", go);
+        }
+    }
+
+    [MenuItem("Tools/Liquid/UI - M5.2 Add Physics Sliders")]
+    static void AddPhysicsSliders()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][M5.2] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+        var panel = ctrl.transform.Find("Panel") as RectTransform;
+        if (panel == null) { Debug.LogError("[UI][M5.2] 'Panel' not found under ControlPanelUI."); return; }
+        // Rebuild on re-run so tweaks (font size, ranges) re-apply cleanly.
+        foreach (var n in new[] { "RopeLengthRow", "ReleaseAngleRow", "SpeedRow" })
+        {
+            var old = panel.Find(n);
+            if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+        }
+
+        // Dark translucent panel (preferred look); white bold labels read clearly on it.
+        var panelImg = panel.GetComponent<Image>();
+        if (panelImg != null) panelImg.color = new Color(0f, 0f, 0f, 0.55f);
+
+        if (ctrl.bucket == null) ctrl.bucket = Object.FindFirstObjectByType<Bucket>();
+        var bucket = ctrl.bucket;
+        float l   = bucket != null ? bucket.l        : 4f;
+        float ang = bucket != null ? bucket.thetaMax : 45f;
+        float spd = bucket != null ? bucket.omega    : 1.5f;
+
+        Undo.RegisterFullObjectHierarchyUndo(panel.gameObject, "Add Physics Sliders");
+
+        ctrl.ropeSlider  = BuildControlRow(panel, "Rope Length",   1f, 8f,  l,   0, out ctrl.ropeValue);
+        ctrl.angleSlider = BuildControlRow(panel, "Release Angle", 0f, 90f, ang, 1, out ctrl.angleValue);
+        ctrl.speedSlider = BuildControlRow(panel, "Speed",         0f, 3f,  spd, 2, out ctrl.speedValue);
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][M5.2] Added 3 physics sliders (rope length, angle, speed) wired to UIControlPanel.", ctrl.gameObject);
+    }
+
+    [MenuItem("Tools/Liquid/UI - M5.3 Add Liquid Sliders")]
+    static void AddLiquidSliders()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][M5.3] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+        var panel = ctrl.transform.Find("Panel") as RectTransform;
+        if (panel == null) { Debug.LogError("[UI][M5.3] 'Panel' not found under ControlPanelUI."); return; }
+
+        // Link the bucket's fluid (Cylinder shape), not the tank's (Box).
+        if (ctrl.bucketFluid == null)
+            foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+                if (f.containerShape == SphFluid.ContainerShape.Cylinder) { ctrl.bucketFluid = f; break; }
+        var fluid = ctrl.bucketFluid;
+        if (fluid == null) { Debug.LogError("[UI][M5.3] No bucket SphFluid (Cylinder) found in the scene."); return; }
+
+        // Rebuild on re-run so tweaks re-apply cleanly.
+        foreach (var n in new[] { "ViscosityRow", "HoleDiameterRow", "SplatWidthRow" })
+        {
+            var old = panel.Find(n);
+            if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+        }
+
+        // Indices 3..5 stack these below the physics rows (0..2 from M5.2).
+        ctrl.viscositySlider = BuildControlRow(panel, "Viscosity",     0f,    20f, fluid.viscosity,    3, out ctrl.viscosityValue);
+        ctrl.holeSlider      = BuildControlRow(panel, "Hole Diameter", 0.05f, 1f,  fluid.holeDiameter, 4, out ctrl.holeValue);
+        ctrl.splatSlider     = BuildControlRow(panel, "Splat Width",   0.05f, 0.5f, fluid.splatRadius, 5, out ctrl.splatValue);
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][M5.3] Added 3 liquid sliders (viscosity, hole diameter, splat width) wired to UIControlPanel.", ctrl.gameObject);
+    }
+
+    [MenuItem("Tools/Liquid/UI - M5.4a Add Color Controls")]
+    static void AddColorControls()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][M5.4a] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+        var panel = ctrl.transform.Find("Panel") as RectTransform;
+        if (panel == null) { Debug.LogError("[UI][M5.4a] 'Panel' not found under ControlPanelUI."); return; }
+
+        if (ctrl.bucketFluid == null)
+            foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+                if (f.containerShape == SphFluid.ContainerShape.Cylinder) { ctrl.bucketFluid = f; break; }
+        var fluid = ctrl.bucketFluid;
+        if (fluid == null) { Debug.LogError("[UI][M5.4a] No bucket SphFluid (Cylinder) found."); return; }
+
+        // Grow the panel so the color section fits below the existing 6 rows.
+        panel.sizeDelta = new Vector2(panel.sizeDelta.x, 820f);
+
+        foreach (var n in new[] { "PaintColorRow", "RedRow", "GreenRow", "BlueRow" })
+        {
+            var old = panel.Find(n);
+            if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+        }
+
+        BuildColorSwatches(panel, ctrl, 6);                 // preset buttons (row 6)
+
+        Color c = fluid.paintColor;                          // RGB sliders (rows 7..9)
+        ctrl.rSlider = BuildControlRow(panel, "Red",   0f, 1f, c.r, 7, out ctrl.rValue);
+        ctrl.gSlider = BuildControlRow(panel, "Green", 0f, 1f, c.g, 8, out ctrl.gValue);
+        ctrl.bSlider = BuildControlRow(panel, "Blue",  0f, 1f, c.b, 9, out ctrl.bValue);
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][M5.4a] Added color swatches + RGB sliders wired to UIControlPanel.", ctrl.gameObject);
+    }
+
+    [MenuItem("Tools/Liquid/UI - M5.4b Add Action Buttons")]
+    static void AddActionButtons()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][M5.4b] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+        var panel = ctrl.transform.Find("Panel") as RectTransform;
+        if (panel == null) { Debug.LogError("[UI][M5.4b] 'Panel' not found under ControlPanelUI."); return; }
+
+        if (ctrl.bucketFluid == null)
+            foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+                if (f.containerShape == SphFluid.ContainerShape.Cylinder) { ctrl.bucketFluid = f; break; }
+        if (ctrl.canvas == null) ctrl.canvas = Object.FindFirstObjectByType<PaintCanvas>();
+
+        // Grow the panel to fit the buttons row, then (re)build it.
+        panel.sizeDelta = new Vector2(panel.sizeDelta.x, 900f);
+        var oldRow = panel.Find("ActionsRow");
+        if (oldRow != null) Undo.DestroyObjectImmediate(oldRow.gameObject);
+
+        const float top = 14f, pad = 12f, rowH = 80f, innerW = 336f, gap = 8f, btnH = 40f;
+        var row = new GameObject("ActionsRow", typeof(RectTransform));
+        var rrt = row.GetComponent<RectTransform>();
+        rrt.SetParent(panel, false);
+        rrt.anchorMin = rrt.anchorMax = new Vector2(0f, 1f);
+        rrt.pivot = new Vector2(0f, 1f);
+        rrt.anchoredPosition = new Vector2(pad, -(top + 10 * rowH));
+        rrt.sizeDelta = new Vector2(innerW, btnH);
+
+        float btnW = (innerW - gap) / 2f;
+        ctrl.holeButton = NewButton(rrt, "Hole", 0f, 0f, btnW, btnH, new Color(0.20f, 0.40f, 0.60f, 1f), out ctrl.holeLabel);
+        ctrl.holeButton.name = "HoleButton";
+        ctrl.clearButton = NewButton(rrt, "Clear Canvas", btnW + gap, 0f, btnW, btnH, new Color(0.60f, 0.25f, 0.25f, 1f), out _);
+        ctrl.clearButton.name = "ClearButton";
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][M5.4b] Added Hole toggle + Clear Canvas buttons wired to UIControlPanel.", ctrl.gameObject);
+    }
+
+    [MenuItem("Tools/Liquid/UI - M5.5 Add Save/Reset Buttons")]
+    static void AddSaveResetButtons()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][M5.5] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+        var panel = ctrl.transform.Find("Panel") as RectTransform;
+        if (panel == null) { Debug.LogError("[UI][M5.5] 'Panel' not found under ControlPanelUI."); return; }
+        if (ctrl.canvas == null) ctrl.canvas = Object.FindFirstObjectByType<PaintCanvas>();
+
+        // Grow the panel for the last row, then (re)build it.
+        panel.sizeDelta = new Vector2(panel.sizeDelta.x, 960f);
+        var oldRow = panel.Find("SaveResetRow");
+        if (oldRow != null) Undo.DestroyObjectImmediate(oldRow.gameObject);
+
+        const float top = 14f, pad = 12f, rowH = 80f, innerW = 336f, gap = 8f, btnH = 40f;
+        var row = new GameObject("SaveResetRow", typeof(RectTransform));
+        var rrt = row.GetComponent<RectTransform>();
+        rrt.SetParent(panel, false);
+        rrt.anchorMin = rrt.anchorMax = new Vector2(0f, 1f);
+        rrt.pivot = new Vector2(0f, 1f);
+        rrt.anchoredPosition = new Vector2(pad, -(top + 11 * rowH));
+        rrt.sizeDelta = new Vector2(innerW, btnH);
+
+        float btnW = (innerW - gap) / 2f;
+        ctrl.saveButton  = NewButton(rrt, "Save PNG", 0f,         0f, btnW, btnH, new Color(0.20f, 0.55f, 0.30f, 1f), out _);
+        ctrl.saveButton.name = "SaveButton";
+        ctrl.resetButton = NewButton(rrt, "Reset",    btnW + gap, 0f, btnW, btnH, new Color(0.45f, 0.45f, 0.45f, 1f), out _);
+        ctrl.resetButton.name = "ResetButton";
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][M5.5] Added Save PNG + Reset buttons wired to UIControlPanel.", ctrl.gameObject);
+    }
+
+    // A "Paint Color" row: a left label plus a strip of clickable preset color swatches.
+    static void BuildColorSwatches(RectTransform panel, UIControlPanel ctrl, int index)
+    {
+        const float rowH = 80f, top = 14f, pad = 12f, innerW = 336f;
+        var row = new GameObject("PaintColorRow", typeof(RectTransform));
+        var rrt = row.GetComponent<RectTransform>();
+        rrt.SetParent(panel, false);
+        rrt.anchorMin = rrt.anchorMax = new Vector2(0f, 1f);
+        rrt.pivot = new Vector2(0f, 1f);
+        rrt.anchoredPosition = new Vector2(pad, -(top + index * rowH));
+        rrt.sizeDelta = new Vector2(innerW, rowH - 8f);
+
+        NewLabel(rrt, "Paint Color", 0f, 0f, 236f, 32f, TextAnchor.MiddleLeft);
+
+        Color[] presets =
+        {
+            new Color(0.85f, 0.10f, 0.15f), // red
+            new Color(0.10f, 0.35f, 0.90f), // blue
+            new Color(0.10f, 0.65f, 0.20f), // green
+            new Color(0.95f, 0.80f, 0.10f), // yellow
+            Color.white,
+            Color.black,
+        };
+        var buttons = new Button[presets.Length];
+        const float gap = 6f, swH = 30f, swY = 40f;
+        float sw = (innerW - gap * (presets.Length - 1)) / presets.Length;
+        for (int i = 0; i < presets.Length; i++)
+        {
+            buttons[i] = NewButton(rrt, "", i * (sw + gap), swY, sw, swH, presets[i], out _);
+            buttons[i].name = "Swatch" + i;
+        }
+        ctrl.swatchButtons = buttons;
+        ctrl.swatchColors = presets;
+    }
+
+    // A clickable uGUI button (background Image + optional centered label).
+    static Button NewButton(RectTransform parent, string label, float x, float y, float w, float h,
+                            Color bg, out Text labelText)
+    {
+        var go = new GameObject(label.Length > 0 ? label.Replace(" ", "") : "Button",
+                                typeof(Image), typeof(Button));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+
+        var img = go.GetComponent<Image>();
+        img.color = bg;
+        var btn = go.GetComponent<Button>();
+        btn.targetGraphic = img;
+
+        labelText = null;
+        if (label.Length > 0)
+        {
+            labelText = NewLabel(rt, label, 0f, 0f, w, h, TextAnchor.MiddleCenter);
+            labelText.resizeTextForBestFit = true;   // shrink/grow to fit the button
+            labelText.resizeTextMinSize = 8;
+            labelText.resizeTextMaxSize = 26;
+        }
+        return btn;
+    }
+
+    // One labeled control row: name on the left, live value on the right, slider underneath.
+    // 'index' stacks rows top-down inside the panel. Reused by M5.3/M5.4.
+    static Slider BuildControlRow(RectTransform panel, string label, float min, float max,
+                                  float value, int index, out Text valueText)
+    {
+        const float rowH = 80f, top = 14f, pad = 12f, innerW = 336f;
+        var row = new GameObject(label.Replace(" ", "") + "Row", typeof(RectTransform));
+        var rrt = row.GetComponent<RectTransform>();
+        rrt.SetParent(panel, false);
+        rrt.anchorMin = rrt.anchorMax = new Vector2(0f, 1f);
+        rrt.pivot = new Vector2(0f, 1f);
+        rrt.anchoredPosition = new Vector2(pad, -(top + index * rowH));
+        rrt.sizeDelta = new Vector2(innerW, rowH - 8f);
+
+        NewLabel(rrt, label, 0f, 0f, 236f, 32f, TextAnchor.MiddleLeft);
+        valueText = NewLabel(rrt, value.ToString("0.0"), innerW - 100f, 0f, 100f, 32f, TextAnchor.MiddleRight);
+        return NewSlider(rrt, 0f, 40f, innerW, 26f, min, max, value);
+    }
+
+    static Text NewLabel(RectTransform parent, string text, float x, float y, float w, float h, TextAnchor anchor)
+    {
+        var go = new GameObject("Label", typeof(Text));
+        var t = go.GetComponent<Text>();
+        var rt = t.rectTransform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = 26;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.alignment = anchor;
+        t.text = text;
+        return t;
+    }
+
+    // A fully wired uGUI slider built from scratch (background + fill + handle).
+    static Slider NewSlider(RectTransform parent, float x, float y, float w, float h,
+                            float min, float max, float value)
+    {
+        var go = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+
+        var bg = NewImage("Background", rt, new Color(1f, 1f, 1f, 0.25f));
+        Stretch(bg.rectTransform);
+
+        var fillArea = new GameObject("Fill Area", typeof(RectTransform));
+        var fart = (RectTransform)fillArea.transform;
+        fart.SetParent(rt, false);
+        Stretch(fart); fart.offsetMin = new Vector2(5f, 0f); fart.offsetMax = new Vector2(-5f, 0f);
+        var fill = NewImage("Fill", fart, new Color(0.3f, 0.7f, 1f, 1f));
+        fill.rectTransform.anchorMin = new Vector2(0f, 0f);
+        fill.rectTransform.anchorMax = new Vector2(0f, 1f);
+        fill.rectTransform.sizeDelta = new Vector2(10f, 0f);
+
+        var hsa = new GameObject("Handle Slide Area", typeof(RectTransform));
+        var hsart = (RectTransform)hsa.transform;
+        hsart.SetParent(rt, false);
+        Stretch(hsart); hsart.offsetMin = new Vector2(5f, 0f); hsart.offsetMax = new Vector2(-5f, 0f);
+        var handle = NewImage("Handle", hsart, Color.white);
+        handle.rectTransform.anchorMin = new Vector2(0f, 0f);
+        handle.rectTransform.anchorMax = new Vector2(0f, 1f);
+        handle.rectTransform.sizeDelta = new Vector2(16f, 0f);
+
+        var s = go.GetComponent<Slider>();
+        s.fillRect = fill.rectTransform;
+        s.handleRect = handle.rectTransform;
+        s.targetGraphic = handle;
+        s.direction = Slider.Direction.LeftToRight;
+        s.minValue = min; s.maxValue = max; s.value = value;
+        return s;
+    }
+
+    static Image NewImage(string name, Transform parent, Color color)
+    {
+        var go = new GameObject(name, typeof(Image));
+        var img = go.GetComponent<Image>();
+        img.rectTransform.SetParent(parent, false);
+        img.color = color;
+        return img;
+    }
+
+    static void Stretch(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
     }
 
     static bool TryGetBounds(GameObject go, out Bounds b)

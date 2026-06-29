@@ -21,3 +21,6 @@ UserSettings/
 
 .DS_Store
 project.txt
+
+# Saved canvas exports (runtime output, not source)
+SavedPaintings/
