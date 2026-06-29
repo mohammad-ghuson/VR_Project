@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -184,6 +185,165 @@ public static class LiquidSurfaceTools
         Debug.Log("[SPH][StepA] Created 'SPHFluid' wired to '" + bucketT.name +
                   "'. TIP: temporarily DISABLE the Bucket component (uncheck it) for this test " +
                   "so the bucket stays still while particles fall into it.", go);
+    }
+
+    [MenuItem("Tools/Liquid/Setup Demo Scene (positions + camera)")]
+    static void SetupDemoScene()
+    {
+        SetTransform("ground", new Vector3(0, 0, 0), Vector3.zero, new Vector3(1000, 1, 1000));
+        SetTransform("Bucket", new Vector3(0, 5, 0), Vector3.zero, new Vector3(7, 7, 7));
+        SetTransform("PaintTank", new Vector3(5f, 1f, 0), Vector3.zero, new Vector3(1, 2, 1));
+        SetTransform("Directional Light", new Vector3(0, 20, 0), new Vector3(50, -30, 0), Vector3.one);
+        // Camera framed for runtime: bucket hangs ~ (0,3,0), tank at (5,1.5,0). 3/4 elevated front view.
+        SetTransform("Main Camera", new Vector3(2.5f, 6f, 8f), new Vector3(24, 180, 0), Vector3.one);
+
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log("[Setup] Scene arranged (ground, Bucket, PaintTank, Light, Camera). Press Play.");
+    }
+
+    static void SetTransform(string name, Vector3 pos, Vector3 euler, Vector3 scale)
+    {
+        var go = GameObject.Find(name);
+        if (go == null) { Debug.LogWarning($"[Setup] '{name}' not found (skipped)."); return; }
+        Undo.RecordObject(go.transform, "Setup Demo Scene");
+        go.transform.position = pos;
+        go.transform.rotation = Quaternion.Euler(euler);
+        go.transform.localScale = scale;
+        EditorUtility.SetDirty(go);
+    }
+
+    [MenuItem("Tools/Liquid/Tank - T1 Create Transparent Tank")]
+    static void CreatePaintTank()
+    {
+        if (GameObject.Find("PaintTank") != null)
+        {
+            Debug.LogWarning("[Tank] 'PaintTank' already exists.");
+            Selection.activeObject = GameObject.Find("PaintTank");
+            return;
+        }
+
+        var go = new GameObject("PaintTank");
+        Undo.RegisterCreatedObjectUndo(go, "Create Paint Tank");
+        go.AddComponent<MeshFilter>().sharedMesh = CreateOrLoadBoxMesh();
+        go.AddComponent<MeshRenderer>().sharedMaterial = CreateGlassMaterial();
+
+        // A unit cube mesh scaled to the tank size, sitting on the ground at the side.
+        go.transform.position = new Vector3(5f, 1f, 0f);
+        go.transform.localScale = new Vector3(1f, 2f, 1f); // smaller tank => 300 particles fill it visibly
+
+        Selection.activeObject = go;
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Debug.Log("[Tank][T1] Created transparent 'PaintTank' at the side. Next (T2) fills it with SPH.", go);
+    }
+
+    // Unit cube (size 1, centered) with flat per-face normals. Material renders both sides.
+    static Mesh CreateOrLoadBoxMesh()
+    {
+        const string path = "Assets/Meshes/PaintTankBox.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if (existing != null) return existing;
+
+        Vector3[] faces = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+        var verts = new List<Vector3>();
+        var norms = new List<Vector3>();
+        var tris = new List<int>();
+        foreach (var nrm in faces)
+        {
+            Vector3 t = Vector3.Cross(nrm, Vector3.up);
+            if (t.sqrMagnitude < 1e-4f) t = Vector3.Cross(nrm, Vector3.right);
+            t.Normalize();
+            Vector3 b = Vector3.Cross(nrm, t).normalized;
+            Vector3 c = nrm * 0.5f;
+
+            int baseIdx = verts.Count;
+            verts.Add(c - t * 0.5f - b * 0.5f); norms.Add(nrm);
+            verts.Add(c + t * 0.5f - b * 0.5f); norms.Add(nrm);
+            verts.Add(c + t * 0.5f + b * 0.5f); norms.Add(nrm);
+            verts.Add(c - t * 0.5f + b * 0.5f); norms.Add(nrm);
+            tris.Add(baseIdx); tris.Add(baseIdx + 1); tris.Add(baseIdx + 2);
+            tris.Add(baseIdx); tris.Add(baseIdx + 2); tris.Add(baseIdx + 3);
+        }
+
+        var mesh = new Mesh { name = "PaintTankBox" };
+        mesh.SetVertices(verts);
+        mesh.SetNormals(norms);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateBounds();
+
+        if (!AssetDatabase.IsValidFolder("Assets/Meshes")) AssetDatabase.CreateFolder("Assets", "Meshes");
+        AssetDatabase.CreateAsset(mesh, path);
+        AssetDatabase.SaveAssets();
+        return mesh;
+    }
+
+    // Transparent URP/Lit material (glass-like, both sides visible).
+    static Material CreateGlassMaterial()
+    {
+        const string path = "Assets/Materials/GlassTank.mat";
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null) return existing;
+
+        var sh = Shader.Find("Universal Render Pipeline/Lit");
+        var m = new Material(sh);
+        m.SetFloat("_Surface", 1f);   // transparent
+        m.SetFloat("_Blend", 0f);     // alpha blend
+        m.SetFloat("_ZWrite", 0f);
+        m.SetFloat("_Cull", 0f);      // render both faces
+        m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        m.SetOverrideTag("RenderType", "Transparent");
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", new Color(0.6f, 0.8f, 1f, 0.15f));
+
+        AssetDatabase.CreateAsset(m, path);
+        AssetDatabase.SaveAssets();
+        return m;
+    }
+
+    [MenuItem("Tools/Liquid/Tank - T2 Fill With Liquid")]
+    static void FillTank()
+    {
+        var tank = GameObject.Find("PaintTank");
+        if (tank == null) { Debug.LogError("[Tank] Create the PaintTank first (T1)."); return; }
+        if (GameObject.Find("TankFluid") != null)
+        {
+            Debug.LogWarning("[Tank] 'TankFluid' already exists.");
+            Selection.activeObject = GameObject.Find("TankFluid");
+            return;
+        }
+
+        var go = new GameObject("TankFluid");
+        Undo.RegisterCreatedObjectUndo(go, "Create Tank Fluid");
+        var sph = go.AddComponent<SphFluid>();
+        sph.bucket = tank.transform;
+        sph.containerShape = SphFluid.ContainerShape.Box;
+        sph.particleMaterial = CreatePaintMaterial();
+        sph.particleCount = 300;
+        sph.holeOpen = false;
+        sph.showStats = false; // avoid overlapping the bucket fluid's HUD
+
+        Selection.activeObject = go;
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Debug.Log("[Tank][T2] Created 'TankFluid' (Box) filling the PaintTank. Press Play.", go);
+    }
+
+    [MenuItem("Tools/Liquid/Tank - T3 Add Shake")]
+    static void AddTankShake()
+    {
+        var tank = GameObject.Find("PaintTank");
+        if (tank == null) { Debug.LogError("[Tank] Create the PaintTank first (T1)."); return; }
+        if (tank.GetComponent<Shaker>() != null)
+        {
+            Debug.LogWarning("[Tank] Shaker already attached.");
+            Selection.activeObject = tank;
+            return;
+        }
+
+        Undo.AddComponent<Shaker>(tank);
+        Selection.activeObject = tank;
+        EditorSceneManager.MarkSceneDirty(tank.scene);
+        Debug.Log("[Tank][T3] Added Shaker to PaintTank. Press Play -> the tank rocks and the liquid sloshes.", tank);
     }
 
     static bool TryGetBounds(GameObject go, out Bounds b)

@@ -21,7 +21,13 @@ public class SphFluid : MonoBehaviour
 
     [Header("Container (auto-filled from bucket bounds at Start)")]
     public float innerRadiusFactor = 0.85f;
+    public float bottomLift = 0f;             // raise the analytic floor up into the bucket body (taper fix)
     public bool followBucket = true;          // Step E: container tracks the moving/tilting bucket
+
+    public enum ContainerShape { Cylinder, Box }
+    public ContainerShape containerShape = ContainerShape.Cylinder;
+    public Vector3 boxHalfExtents;            // box mode: half-size (auto-filled from the container's scale)
+
     public Vector3 containerCenter;
     public float containerRadius;
     public float containerBottomY;
@@ -77,6 +83,8 @@ public class SphFluid : MonoBehaviour
     Vector3 localContainerCenter;   // container center expressed in bucket-local space
     Vector3 worldContainerCenter;   // current world center of the cylinder
     Vector3 worldUp = Vector3.up;   // current cylinder axis (bucket's up)
+    Vector3 worldRight = Vector3.right;     // box mode: side axis
+    Vector3 worldForward = Vector3.forward; // box mode: depth axis
     Vector3 containerLinVel;        // wall linear velocity (world)
     Vector3 containerAngVel;        // wall angular velocity (world, rad/s)
     Vector3 prevContainerCenter;
@@ -166,6 +174,86 @@ public class SphFluid : MonoBehaviour
         Graphics.RenderMeshInstanced(rp, particleMesh, 0, matrices, positions.Length);
     }
 
+    // Draw the analytic liquid container (cyan) so we can align it with the bucket walls.
+    void OnDrawGizmos()
+    {
+        if (bucket == null) return;
+
+        if (containerShape == ContainerShape.Box)
+        {
+            Vector3 bc = Application.isPlaying ? worldContainerCenter : bucket.position;
+            Vector3 br = Application.isPlaying ? worldRight : bucket.right;
+            Vector3 bu = Application.isPlaying ? worldUp : bucket.up;
+            Vector3 bf = Application.isPlaying ? worldForward : bucket.forward;
+            Vector3 he = boxHalfExtents;
+            if (!Application.isPlaying)
+            {
+                Vector3 s = bucket.lossyScale;
+                he = new Vector3(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z)) * 0.5f;
+            }
+            DrawGizmoBox(bc, br, bu, bf, he);
+            return;
+        }
+
+        var rends = bucket.GetComponentsInChildren<Renderer>();
+        if (rends == null || rends.Length == 0) return;
+
+        Bounds b = rends[0].bounds;
+        for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+        Vector3 center = Application.isPlaying ? worldContainerCenter : b.center;
+        Vector3 up = Application.isPlaying ? worldUp : bucket.up;
+        float radius = Application.isPlaying ? containerRadius : Mathf.Min(b.size.x, b.size.z) * 0.5f * innerRadiusFactor;
+        float halfH = Application.isPlaying ? containerHalfHeight : b.size.y * 0.5f;
+
+        Vector3 floor = center - up * (halfH - bottomLift);
+        Vector3 top = center + up * halfH;
+
+        Gizmos.color = Color.cyan;
+        DrawGizmoCircle(floor, up, radius);
+        DrawGizmoCircle(top, up, radius);
+
+        Vector3 a = Vector3.Cross(up, Vector3.forward);
+        if (a.sqrMagnitude < 1e-4f) a = Vector3.Cross(up, Vector3.right);
+        a.Normalize();
+        Vector3 c2 = Vector3.Cross(up, a).normalized;
+        foreach (var dir in new[] { a, -a, c2, -c2 })
+            Gizmos.DrawLine(floor + dir * radius, top + dir * radius);
+    }
+
+    static void DrawGizmoBox(Vector3 c, Vector3 right, Vector3 up, Vector3 fwd, Vector3 he)
+    {
+        Gizmos.color = Color.cyan;
+        Vector3 rx = right * he.x, uy = up * he.y, fz = fwd * he.z;
+        Vector3[] k = new Vector3[8];
+        int idx = 0;
+        for (int sx = -1; sx <= 1; sx += 2)
+        for (int sy = -1; sy <= 1; sy += 2)
+        for (int sz = -1; sz <= 1; sz += 2)
+            k[idx++] = c + rx * sx + uy * sy + fz * sz;
+
+        int[,] e = { {0,1},{2,3},{4,5},{6,7}, {0,2},{1,3},{4,6},{5,7}, {0,4},{1,5},{2,6},{3,7} };
+        for (int i = 0; i < 12; i++) Gizmos.DrawLine(k[e[i, 0]], k[e[i, 1]]);
+    }
+
+    static void DrawGizmoCircle(Vector3 c, Vector3 axis, float r)
+    {
+        Vector3 a = Vector3.Cross(axis, Vector3.forward);
+        if (a.sqrMagnitude < 1e-4f) a = Vector3.Cross(axis, Vector3.right);
+        a.Normalize();
+        Vector3 b = Vector3.Cross(axis, a).normalized;
+
+        const int seg = 32;
+        Vector3 prev = c + a * r;
+        for (int i = 1; i <= seg; i++)
+        {
+            float t = i / (float)seg * Mathf.PI * 2f;
+            Vector3 p = c + (a * Mathf.Cos(t) + b * Mathf.Sin(t)) * r;
+            Gizmos.DrawLine(prev, p);
+            prev = p;
+        }
+    }
+
     void OnGUI()
     {
         if (!showStats) return;
@@ -198,6 +286,13 @@ public class SphFluid : MonoBehaviour
 
             worldContainerCenter = newCenter;
             worldUp = newUp;
+            if (containerShape == ContainerShape.Box)
+            {
+                worldRight = bucket.right;
+                worldForward = bucket.forward;
+                Vector3 s = bucket.lossyScale;
+                boxHalfExtents = new Vector3(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z)) * 0.5f;
+            }
             prevContainerCenter = newCenter;
             prevBucketRot = bucket.rotation;
         }
@@ -314,6 +409,8 @@ public class SphFluid : MonoBehaviour
     // bucket drags the fluid and produces sloshing.
     void ResolveBoundary(int i, ref Vector3 p, ref Vector3 v)
     {
+        if (containerShape == ContainerShape.Box) { ResolveBox(ref p, ref v); return; }
+
         float r = particleRadius;
         Vector3 up = worldUp;
 
@@ -339,7 +436,7 @@ public class SphFluid : MonoBehaviour
         }
 
         // Bottom — closed, EXCEPT a hole at the center the paint can drain through.
-        float minAxial = -containerHalfHeight + r;
+        float minAxial = -containerHalfHeight + bottomLift + r;
         if (axial < minAxial)
         {
             bool overHole = holeOpen && radial < holeDiameter * 0.5f;
@@ -365,6 +462,24 @@ public class SphFluid : MonoBehaviour
         float vn = Vector3.Dot(vRel, inwardNormal);
         if (vn < 0f) vRel -= (1f + boundaryDamping) * vn * inwardNormal; // bounce inward
         v = wallVel + vRel;
+    }
+
+    // Oriented box boundary: bottom + 4 sides closed, TOP OPEN (so pressure is not
+    // trapped — same reason the bucket's top is open and stays stable).
+    void ResolveBox(ref Vector3 p, ref Vector3 v)
+    {
+        ResolveBoxAxis(ref p, ref v, worldRight, boxHalfExtents.x, true);
+        ResolveBoxAxis(ref p, ref v, worldForward, boxHalfExtents.z, true);
+        ResolveBoxAxis(ref p, ref v, worldUp, boxHalfExtents.y, false); // top open
+    }
+
+    void ResolveBoxAxis(ref Vector3 p, ref Vector3 v, Vector3 axis, float halfExtent, bool clampPositive)
+    {
+        float limit = halfExtent - particleRadius;
+        if (limit <= 0f) return;
+        float d = Vector3.Dot(p - worldContainerCenter, axis);
+        if (clampPositive && d > limit) { p += axis * (limit - d); ReflectVel(ref v, p, -axis); }
+        else if (d < -limit) { p += axis * (-limit - d); ReflectVel(ref v, p, axis); }
     }
 
     // ----- Step B: spatial hash neighbor search -----
@@ -439,6 +554,19 @@ public class SphFluid : MonoBehaviour
     bool ComputeContainerFromBucket()
     {
         if (bucket == null) { Debug.LogError("[SPH] No 'bucket' reference set."); return false; }
+
+        if (containerShape == ContainerShape.Box)
+        {
+            Vector3 s = bucket.lossyScale;
+            boxHalfExtents = new Vector3(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z)) * 0.5f;
+            localContainerCenter = Vector3.zero;     // unit-cube mesh is centered on the transform
+            worldContainerCenter = bucket.position;
+            prevContainerCenter = worldContainerCenter;
+            prevBucketRot = bucket.rotation;
+            worldUp = bucket.up; worldRight = bucket.right; worldForward = bucket.forward;
+            return true;
+        }
+
         var renderers = bucket.GetComponentsInChildren<Renderer>();
         if (renderers.Length == 0) { Debug.LogError("[SPH] Bucket has no Renderer."); return false; }
 
@@ -480,7 +608,14 @@ public class SphFluid : MonoBehaviour
         if (particleMaterial != null) particleMaterial.enableInstancing = true;
         particleDiameter = particleRadius * 2f * particleVisualScale;
 
-        // Build an orthonormal basis around the (possibly tilted) container axis.
+        if (containerShape == ContainerShape.Box) SpawnGridBox();
+        else SpawnGridCylinder();
+    }
+
+    // Spawn from the FLOOR upward (robust to the handle inflating the top of the bounds):
+    // the paint starts pre-filled at the bottom instead of dropping in from above.
+    void SpawnGridCylinder()
+    {
         Vector3 up = worldUp;
         Vector3 right = Vector3.Cross(up, Vector3.forward);
         if (right.sqrMagnitude < 1e-4f) right = Vector3.Cross(up, Vector3.right);
@@ -490,7 +625,7 @@ public class SphFluid : MonoBehaviour
         float spacing = particleRadius * 2.1f;
         int perRow = Mathf.Max(1, Mathf.FloorToInt((containerRadius * 1.4f) / spacing));
         float start = -(perRow - 1) * spacing * 0.5f;
-        Vector3 top = worldContainerCenter + up * (containerHalfHeight - spacing); // near the top
+        Vector3 baseBottom = worldContainerCenter - up * (containerHalfHeight - bottomLift - spacing);
 
         for (int i = 0; i < particleCount; i++)
         {
@@ -499,10 +634,36 @@ public class SphFluid : MonoBehaviour
             int gx = rem % perRow;
             int gz = rem / perRow;
 
-            positions[i] = top
+            positions[i] = baseBottom
                 + right * (start + gx * spacing)
                 + fwd * (start + gz * spacing)
-                - up * (layer * spacing);
+                + up * (layer * spacing);
+            velocities[i] = Vector3.zero;
+        }
+    }
+
+    void SpawnGridBox()
+    {
+        Vector3 right = worldRight, up = worldUp, fwd = worldForward;
+        float spacing = particleRadius * 2.1f;
+        int nx = Mathf.Max(1, Mathf.FloorToInt((2f * boxHalfExtents.x - spacing) / spacing));
+        int nz = Mathf.Max(1, Mathf.FloorToInt((2f * boxHalfExtents.z - spacing) / spacing));
+        float startX = -(nx - 1) * spacing * 0.5f;
+        float startZ = -(nz - 1) * spacing * 0.5f;
+        Vector3 baseBottom = worldContainerCenter - up * (boxHalfExtents.y - spacing);
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            int per = nx * nz;
+            int layer = i / per;
+            int rem = i % per;
+            int gx = rem % nx;
+            int gz = rem / nx;
+
+            positions[i] = baseBottom
+                + right * (startX + gx * spacing)
+                + fwd * (startZ + gz * spacing)
+                + up * (layer * spacing);
             velocities[i] = Vector3.zero;
         }
     }
