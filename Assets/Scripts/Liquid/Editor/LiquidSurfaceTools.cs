@@ -346,6 +346,91 @@ public static class LiquidSurfaceTools
         Debug.Log("[Tank][T3] Added Shaker to PaintTank. Press Play -> the tank rocks and the liquid sloshes.", tank);
     }
 
+    [MenuItem("Tools/Liquid/Canvas - M4.1 Create Canvas")]
+    static void CreateCanvas()
+    {
+        if (GameObject.Find("PaintCanvas") != null)
+        {
+            Debug.LogWarning("[Canvas] 'PaintCanvas' already exists.");
+            Selection.activeObject = GameObject.Find("PaintCanvas");
+            return;
+        }
+
+        var go = new GameObject("PaintCanvas");
+        Undo.RegisterCreatedObjectUndo(go, "Create Paint Canvas");
+        go.AddComponent<MeshFilter>().sharedMesh = CreateOrLoadQuadMesh();
+        go.AddComponent<MeshRenderer>().sharedMaterial = CreateCanvasMaterial();
+        go.AddComponent<PaintCanvas>();
+
+        // Horizontal canvas just above the ground, centered under the bucket's swing.
+        go.transform.position = new Vector3(0f, 0.05f, 0f);
+        go.transform.localScale = new Vector3(6f, 1f, 6f);
+
+        Selection.activeObject = go;
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Debug.Log("[Canvas][M4.1] Created a blank PaintCanvas under the bucket.", go);
+    }
+
+    // Flat quad in local XZ (normal +Y, UV 0..1) — the painting surface.
+    static Mesh CreateOrLoadQuadMesh()
+    {
+        const string path = "Assets/Meshes/CanvasQuad.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if (existing != null) return existing;
+
+        var m = new Mesh { name = "CanvasQuad" };
+        m.vertices = new[]
+        {
+            new Vector3(-0.5f, 0f, -0.5f), new Vector3(0.5f, 0f, -0.5f),
+            new Vector3(0.5f, 0f, 0.5f), new Vector3(-0.5f, 0f, 0.5f)
+        };
+        m.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+        m.uv = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+        m.triangles = new[] { 0, 2, 1, 0, 3, 2 };
+        m.RecalculateBounds();
+
+        if (!AssetDatabase.IsValidFolder("Assets/Meshes")) AssetDatabase.CreateFolder("Assets", "Meshes");
+        AssetDatabase.CreateAsset(m, path);
+        AssetDatabase.SaveAssets();
+        return m;
+    }
+
+    static Material CreateCanvasMaterial()
+    {
+        const string path = "Assets/Materials/PaintCanvas.mat";
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null) return existing;
+
+        var sh = Shader.Find("Universal Render Pipeline/Lit");
+        var m = new Material(sh);
+        m.SetFloat("_Cull", 0f); // double-sided so the canvas always shows
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.white); // let the texture show
+        AssetDatabase.CreateAsset(m, path);
+        AssetDatabase.SaveAssets();
+        return m;
+    }
+
+    [MenuItem("Tools/Liquid/Canvas - M4.2 Link Bucket Paint To Canvas")]
+    static void LinkPaintToCanvas()
+    {
+        var canvas = Object.FindFirstObjectByType<PaintCanvas>();
+        if (canvas == null) { Debug.LogError("[Canvas] Create the PaintCanvas first (M4.1)."); return; }
+
+        // Find the bucket's fluid (Cylinder shape), not the tank's (Box).
+        var fluids = Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None);
+        SphFluid bucketFluid = null;
+        foreach (var f in fluids)
+            if (f.containerShape == SphFluid.ContainerShape.Cylinder) { bucketFluid = f; break; }
+        if (bucketFluid == null) { Debug.LogError("[Canvas] No bucket SphFluid (Cylinder) found."); return; }
+
+        Undo.RecordObject(bucketFluid, "Link Canvas");
+        bucketFluid.paintCanvas = canvas;
+        bucketFluid.holeOpen = true; // paint must flow out to draw
+        EditorUtility.SetDirty(bucketFluid);
+        EditorSceneManager.MarkSceneDirty(bucketFluid.gameObject.scene);
+        Debug.Log("[Canvas][M4.2] Linked bucket paint -> canvas, hole opened. Press Play and watch marks appear.", bucketFluid);
+    }
+
     static bool TryGetBounds(GameObject go, out Bounds b)
     {
         b = new Bounds(go.transform.position, Vector3.zero);

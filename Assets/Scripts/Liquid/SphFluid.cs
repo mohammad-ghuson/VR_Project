@@ -56,6 +56,11 @@ public class SphFluid : MonoBehaviour
     public float holeDiameter = 0.2f;        // world-units diameter of the bottom hole
     public float despawnBelowY = -10f;       // escaped paint falling below this is removed (no canvas yet)
 
+    [Header("Canvas painting (M4)")]
+    public PaintCanvas paintCanvas;          // escaped paint that hits this leaves a mark
+    public Color paintColor = new Color(0.85f, 0.10f, 0.15f, 1f);
+    public float splatRadius = 0.15f;        // world-radius of each paint mark
+
     [Header("Display (Step F)")]
     public bool showStats = true;            // on-screen FPS + particle count
 
@@ -351,8 +356,20 @@ public class SphFluid : MonoBehaviour
 
             positions[i] += velocities[i] * dt;
 
-            if (!escaped[i]) ResolveBoundary(i, ref positions[i], ref velocities[i]);
-            if (escaped[i] && positions[i].y < despawnBelowY) dead[i] = true;
+            if (!escaped[i])
+            {
+                ResolveBoundary(i, ref positions[i], ref velocities[i]);
+            }
+            else
+            {
+                // Escaped (free-falling) paint: leave a mark when it reaches the canvas,
+                // otherwise remove it once it falls past the despawn plane.
+                if (paintCanvas != null &&
+                    paintCanvas.TryPaint(positions[i], particleRadius, paintColor, splatRadius))
+                    dead[i] = true;
+                else if (positions[i].y < despawnBelowY)
+                    dead[i] = true;
+            }
         }
     }
 
