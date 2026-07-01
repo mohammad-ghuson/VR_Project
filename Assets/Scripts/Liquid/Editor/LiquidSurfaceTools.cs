@@ -699,6 +699,58 @@ public static class LiquidSurfaceTools
         Debug.Log("[UI][M5.5] Added Save PNG + Reset buttons wired to UIControlPanel.", ctrl.gameObject);
     }
 
+    [MenuItem("Tools/Liquid/UI - S3 Add Complexity Controls")]
+    static void AddComplexityControls()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][S3] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+
+        if (ctrl.bucketFluid == null)
+            foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+                if (f.containerShape == SphFluid.ContainerShape.Cylinder) { ctrl.bucketFluid = f; break; }
+        if (ctrl.bucketFluid == null) { Debug.LogError("[UI][S3] No bucket SphFluid (Cylinder) found."); return; }
+
+        // A separate panel, top-right, so the main controls panel stays intact.
+        var old = ctrl.transform.Find("DemoPanel");
+        if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+
+        var panelGO = new GameObject("DemoPanel", typeof(Image));
+        var prt = (RectTransform)panelGO.transform;
+        prt.SetParent(ctrl.transform, false);
+        prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
+        prt.pivot = new Vector2(1f, 1f);
+        prt.anchoredPosition = new Vector2(-20f, -20f);
+        prt.sizeDelta = new Vector2(340f, 200f);
+        panelGO.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.82f);
+
+        var blue = new Color(0.10f, 0.35f, 0.85f, 1f);        // clear blue text
+        var btnBg = new Color(0.86f, 0.91f, 1f, 1f);          // light button so blue reads
+
+        NewLabel(prt, "SPH Complexity", 12f, 8f, 316f, 26f, TextAnchor.MiddleLeft).color = blue;
+
+        ctrl.methodButton = NewButton(prt, "Mode", 12f, 40f, 316f, 36f, btnBg, out ctrl.methodLabel);
+        ctrl.methodLabel.color = blue;
+        ctrl.methodButton.name = "MethodButton";
+
+        NewLabel(prt, "Particles", 12f, 84f, 190f, 24f, TextAnchor.MiddleLeft).color = blue;
+        ctrl.particleValue = NewLabel(prt, ctrl.bucketFluid.ParticleCount.ToString(), 216f, 84f, 112f, 24f, TextAnchor.MiddleRight);
+        ctrl.particleValue.color = blue;
+        ctrl.particleSlider = NewSlider(prt, 12f, 110f, 316f, 20f, 200f, 3000f, ctrl.bucketFluid.ParticleCount);
+
+        ctrl.applyButton = NewButton(prt, "Apply", 12f, 140f, 150f, 36f, btnBg, out var applyLabel);
+        applyLabel.color = blue;
+        ctrl.applyButton.name = "ApplyButton";
+        ctrl.statsReadout = NewLabel(prt, "-", 170f, 140f, 158f, 36f, TextAnchor.MiddleLeft);
+        ctrl.statsReadout.color = blue;
+        ctrl.statsReadout.resizeTextForBestFit = true;
+        ctrl.statsReadout.resizeTextMinSize = 8;
+        ctrl.statsReadout.resizeTextMaxSize = 20;
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][S3] Added complexity demo panel (mode toggle, particle count, apply, live ms).", ctrl.gameObject);
+    }
+
     // A "Paint Color" row: a left label plus a strip of clickable preset color swatches.
     static void BuildColorSwatches(RectTransform panel, UIControlPanel ctrl, int index)
     {

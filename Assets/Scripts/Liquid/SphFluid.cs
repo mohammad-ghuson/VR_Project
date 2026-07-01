@@ -64,6 +64,14 @@ public class SphFluid : MonoBehaviour
     [Header("Display (Step F)")]
     public bool showStats = true;            // on-screen FPS + particle count
 
+    [Tooltip("Tick during Play: verifies the S1 cached neighbours match a brute-force search, once.")]
+    public bool verifyNeighbors = false;     // S1 correctness self-check (logs PASS/FAIL)
+
+    [Header("Complexity demo (S2)")]
+    [Tooltip("SpatialHashGrid = O(n) (our optimised path). BruteForce = O(n^2), for the live demo.")]
+    public NeighborMethod neighborMethod = NeighborMethod.SpatialHashGrid;
+    public enum NeighborMethod { SpatialHashGrid, BruteForce }
+
     Vector3[] positions;
     Vector3[] velocities;
     float[] density;
@@ -100,6 +108,33 @@ public class SphFluid : MonoBehaviour
     readonly Stack<List<int>> listPool = new Stack<List<int>>();
     readonly List<int> neighborScratch = new List<int>(64);
     int frameCounter;
+
+    // S1 optimisation: cache each particle's neighbours ONCE per step and reuse them in both
+    // the density and the force loops (instead of searching twice). The lists are built with a
+    // HALF stencil (Newton's-3rd-law style): each unordered pair is discovered once and added to
+    // BOTH particles' lists, so we visit ~13 cells instead of 27 while the physics is unchanged.
+    List<int>[] neighbors;
+    static readonly Vector3Int[] ForwardCells = BuildForwardCells();
+
+    // S2: measure the neighbour-search cost directly (ms), so the O(n) vs O(n^2) gap is visible
+    // even when FPS is capped by VSync.
+    readonly System.Diagnostics.Stopwatch neighborTimer = new System.Diagnostics.Stopwatch();
+    float neighborMsSmooth;
+
+    // The 13 "forward" neighbour offsets (one from each of the 13 opposite pairs of the 26
+    // surrounding cells), so scanning them + the home cell visits every pair exactly once.
+    static Vector3Int[] BuildForwardCells()
+    {
+        var list = new List<Vector3Int>(13);
+        for (int dz = -1; dz <= 1; dz++)
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            if (dz > 0 || (dz == 0 && dy > 0) || (dz == 0 && dy == 0 && dx > 0))
+                list.Add(new Vector3Int(dx, dy, dz));
+        }
+        return list.ToArray();
+    }
 
     void Start()
     {
@@ -264,8 +299,28 @@ public class SphFluid : MonoBehaviour
         if (!showStats) return;
         fpsSmooth = Mathf.Lerp(fpsSmooth, 1f / Mathf.Max(Time.deltaTime, 1e-5f), 0.1f);
         int n = positions != null ? positions.Length : 0;
-        GUI.Label(new Rect(12, 10, 520, 24),
-            $"SPH  total:{n}  in-bucket:{inBucketCount}  drained:{drainedCount}  flow:{flowRateSmooth:F0}/s   FPS:{fpsSmooth:F0}");
+        string mode = neighborMethod == NeighborMethod.BruteForce ? "BruteForce O(n^2)" : "Grid O(n)";
+        GUI.Label(new Rect(12, 10, 780, 24),
+            $"SPH  total:{n}  in-bucket:{inBucketCount}  drained:{drainedCount}  flow:{flowRateSmooth:F0}/s   FPS:{fpsSmooth:F0}   mode:{mode}   neighbours:{neighborMsSmooth:F2} ms");
+    }
+
+    // --- S3: public API for the on-screen complexity-demo controls ---
+    public float NeighborMs => neighborMsSmooth;
+    public bool IsBruteForce => neighborMethod == NeighborMethod.BruteForce;
+    public int ParticleCount => particleCount;
+
+    public void ToggleNeighborMethod()
+    {
+        neighborMethod = neighborMethod == NeighborMethod.BruteForce
+            ? NeighborMethod.SpatialHashGrid : NeighborMethod.BruteForce;
+    }
+
+    // Re-spawn the fluid with a new particle count (re-allocates arrays next LateUpdate).
+    public void Respawn(int newCount)
+    {
+        particleCount = Mathf.Clamp(newCount, 1, 20000);
+        drainedCount = 0; lastDrained = 0; accumulator = 0f;
+        spawned = false; // LateUpdate re-runs SpawnParticles() on the next frame
     }
 
     // Step E: place the cylinder at the bucket's current transform and estimate the
@@ -312,7 +367,21 @@ public class SphFluid : MonoBehaviour
 
     void Step(float dt)
     {
-        BuildGrid();                 // Step B: refresh neighbor grid
+        // Neighbour search: our O(n) grid, or the O(n^2) brute force for the complexity demo.
+        // Both fill neighbors[] with identical lists, so only the SPEED differs, not the result.
+        neighborTimer.Restart();
+        if (neighborMethod == NeighborMethod.BruteForce)
+        {
+            BuildNeighborsBruteForce();
+        }
+        else
+        {
+            BuildGrid();             // Step B: refresh neighbor grid
+            BuildNeighbors();        // S1: compute each particle's neighbours ONCE per step
+        }
+        neighborTimer.Stop();
+        neighborMsSmooth = Mathf.Lerp(neighborMsSmooth, (float)neighborTimer.Elapsed.TotalMilliseconds, 0.1f);
+        if (verifyNeighbors) { VerifyNeighbors(); verifyNeighbors = false; }
         ComputeDensityPressure();    // Step C: density + pressure per particle
 
         float h = smoothingRadius;
@@ -329,10 +398,10 @@ public class SphFluid : MonoBehaviour
             Vector3 fVisc = Vector3.zero;
             Vector3 pi = positions[i];
             Vector3 vi = velocities[i];
-            GetNeighbors(i, neighborScratch);
-            for (int k = 0; k < neighborScratch.Count; k++)
+            var nb = neighbors[i];       // S1: reuse the cached neighbour list
+            for (int k = 0; k < nb.Count; k++)
             {
-                int j = neighborScratch[k];
+                int j = nb[k];
                 Vector3 dir = pi - positions[j];
                 float r = dir.magnitude;
                 if (r > 1e-6f && r < h)
@@ -384,10 +453,10 @@ public class SphFluid : MonoBehaviour
         {
             float rho = particleMass * poly6 * (h2 * h2 * h2); // self contribution (r=0)
             Vector3 pi = positions[i];
-            GetNeighbors(i, neighborScratch);
-            for (int k = 0; k < neighborScratch.Count; k++)
+            var nb = neighbors[i];       // S1: reuse the cached neighbour list
+            for (int k = 0; k < nb.Count; k++)
             {
-                int j = neighborScratch[k];
+                int j = nb[k];
                 float r2 = (positions[j] - pi).sqrMagnitude;
                 if (r2 < h2)
                 {
@@ -529,6 +598,96 @@ public class SphFluid : MonoBehaviour
         }
     }
 
+    // S1: build every particle's full neighbour list in ONE pass using the half stencil.
+    // Each unordered pair (i,j) with r<h is found once and pushed onto BOTH lists, so the
+    // density/force loops below just iterate cached lists (no second search). The resulting
+    // lists are identical to GetNeighbors(), so the physics is byte-for-byte unchanged.
+    void BuildNeighbors()
+    {
+        for (int i = 0; i < neighbors.Length; i++) neighbors[i].Clear();
+
+        float h2 = smoothingRadius * smoothingRadius;
+        foreach (var kv in grid)
+        {
+            var home = kv.Value;
+
+            // Pairs within the same cell (each once: b > a).
+            for (int a = 0; a < home.Count; a++)
+            {
+                int i = home[a];
+                Vector3 pi = positions[i];
+                for (int b = a + 1; b < home.Count; b++)
+                {
+                    int j = home[b];
+                    if ((positions[j] - pi).sqrMagnitude <= h2)
+                    { neighbors[i].Add(j); neighbors[j].Add(i); }
+                }
+            }
+
+            // Pairs with the 13 forward cells (home particle i, neighbour-cell particle j).
+            for (int f = 0; f < ForwardCells.Length; f++)
+            {
+                if (!grid.TryGetValue(kv.Key + ForwardCells[f], out var other)) continue;
+                for (int a = 0; a < home.Count; a++)
+                {
+                    int i = home[a];
+                    Vector3 pi = positions[i];
+                    for (int b = 0; b < other.Count; b++)
+                    {
+                        int j = other[b];
+                        if ((positions[j] - pi).sqrMagnitude <= h2)
+                        { neighbors[i].Add(j); neighbors[j].Add(i); }
+                    }
+                }
+            }
+        }
+    }
+
+    // O(n^2) baseline: every particle tested against every other. Produces the SAME neighbour
+    // lists as the grid path, so the fluid is identical — only far slower. For the S2 demo.
+    void BuildNeighborsBruteForce()
+    {
+        for (int i = 0; i < neighbors.Length; i++) neighbors[i].Clear();
+
+        float h2 = smoothingRadius * smoothingRadius;
+        for (int i = 0; i < positions.Length; i++)
+        {
+            if (dead[i]) continue;
+            Vector3 pi = positions[i];
+            for (int j = i + 1; j < positions.Length; j++)
+            {
+                if (dead[j]) continue;
+                if ((positions[j] - pi).sqrMagnitude <= h2)
+                { neighbors[i].Add(j); neighbors[j].Add(i); }
+            }
+        }
+    }
+
+    // S1 self-check: confirm the cached lists equal a straight per-particle search (as sets).
+    // Prints PASS only if EVERY live particle's neighbours match exactly.
+    void VerifyNeighbors()
+    {
+        int mismatches = 0;
+        var refSet = new HashSet<int>();
+        for (int i = 0; i < positions.Length; i++)
+        {
+            if (dead[i]) continue;
+            GetNeighbors(i, neighborScratch);        // independent brute grid search
+            refSet.Clear();
+            for (int k = 0; k < neighborScratch.Count; k++) refSet.Add(neighborScratch[k]);
+
+            var nb = neighbors[i];
+            bool ok = nb.Count == refSet.Count;
+            if (ok)
+                for (int k = 0; k < nb.Count; k++)
+                    if (!refSet.Contains(nb[k])) { ok = false; break; }
+            if (!ok) mismatches++;
+        }
+        Debug.Log(mismatches == 0
+            ? "[SPH][Verify] PASS - cached neighbours match the brute-force search exactly."
+            : $"[SPH][Verify] FAIL - {mismatches} particle(s) mismatched.");
+    }
+
     // Fill 'result' with indices within smoothingRadius of particle i (excludes i).
     void GetNeighbors(int i, List<int> result)
     {
@@ -621,6 +780,9 @@ public class SphFluid : MonoBehaviour
         matrices = new Matrix4x4[particleCount];
         escaped = new bool[particleCount];
         dead = new bool[particleCount];
+
+        neighbors = new List<int>[particleCount];
+        for (int i = 0; i < particleCount; i++) neighbors[i] = new List<int>(48);
 
         if (particleMaterial != null) particleMaterial.enableInstancing = true;
         particleDiameter = particleRadius * 2f * particleVisualScale;

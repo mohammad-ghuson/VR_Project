@@ -40,6 +40,12 @@ public class UIControlPanel : MonoBehaviour
     public Button saveButton;   // canvas.SavePng()
     public Button resetButton;  // restore the authored default values
 
+    [Header("S3 - Complexity demo (auto-filled by the Tools menu)")]
+    public Button methodButton; public Text methodLabel;   // toggle Grid O(n) / Brute O(n^2)
+    public Slider particleSlider; public Text particleValue;
+    public Button applyButton;                              // respawn at the chosen count
+    public Text statsReadout;                               // live "mode  X.XX ms"
+
     // Snapshot of the scene's authored values, captured at Start, used by Reset.
     float defL, defAngle, defOmega, defViscosity, defHole, defSplat;
     Color defColor; bool defHoleOpen;
@@ -102,6 +108,38 @@ public class UIControlPanel : MonoBehaviour
             saveButton.onClick.AddListener(() => canvas.SavePng());
         if (resetButton != null)
             resetButton.onClick.AddListener(ResetDefaults);
+
+        // S3 - complexity demo controls
+        if (bucketFluid != null)
+        {
+            UpdateMethodLabel();
+            if (methodButton != null)
+                methodButton.onClick.AddListener(() => { bucketFluid.ToggleNeighborMethod(); UpdateMethodLabel(); });
+
+            if (particleSlider != null)
+            {
+                particleSlider.wholeNumbers = true;
+                particleSlider.SetValueWithoutNotify(bucketFluid.ParticleCount);
+                if (particleValue != null) particleValue.text = bucketFluid.ParticleCount.ToString();
+                particleSlider.onValueChanged.AddListener(v =>
+                { if (particleValue != null) particleValue.text = Mathf.RoundToInt(v).ToString(); });
+            }
+            if (applyButton != null && particleSlider != null)
+                applyButton.onClick.AddListener(() => bucketFluid.Respawn(Mathf.RoundToInt(particleSlider.value)));
+        }
+    }
+
+    void Update()
+    {
+        if (statsReadout != null && bucketFluid != null)
+            statsReadout.text = (bucketFluid.IsBruteForce ? "Brute O(n^2)" : "Grid O(n)")
+                              + "   " + bucketFluid.NeighborMs.ToString("0.00") + " ms";
+    }
+
+    void UpdateMethodLabel()
+    {
+        if (methodLabel != null && bucketFluid != null)
+            methodLabel.text = bucketFluid.IsBruteForce ? "Mode: Brute O(n^2)" : "Mode: Grid O(n)";
     }
 
     // Restore every control to the scene's authored default. Setting a slider's value
