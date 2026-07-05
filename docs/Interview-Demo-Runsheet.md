@@ -87,6 +87,21 @@ to a texture UV and stamp a soft splat, connecting nearby hits into continuous s
 A built-in self-check (`verifyNeighbors`) compares the cached neighbour lists against an
 independent brute-force search for every particle; it logged **PASS**, i.e. identical sets.
 
+**Q: Why do the particles seem to overlap / sink into each other?**
+Because an SPH particle is **not a rigid ball** — it is a *sample point* of the fluid with a
+smoothing kernel of radius `h = 0.2`, while the little sphere we draw is only a visual marker of
+radius 0.05. Nothing in SPH forbids the drawn spheres from overlapping; what resists crowding is
+the **pressure force**, `p = k·(ρ − ρ₀)`, which grows as local density exceeds the rest density
+and pushes particles apart. We use **weakly-compressible SPH** (the standard Müller-2003 model)
+with a soft stiffness `k = 3` for stability, so under gravity the lower layers compress slightly
+and the rendered spheres visually interpenetrate. At spawn the particles sit on a perfect grid
+(spacing = one diameter), so they look separate; once they settle, the gravity–pressure balance
+packs them a bit tighter — that's the "shrinking" you see. It is expected physics, not a bug.
+**Mitigations if desired:** raise `stiffness` (more incompressible, but needs a smaller
+`timeStep`/more sub-steps to stay stable), or simply lower `particleVisualScale` (purely
+cosmetic). A fully incompressible look would need a different solver family (e.g. PBF/IISPH) —
+out of scope, and unnecessary for paint.
+
 ---
 
 ## Numbers to cite
