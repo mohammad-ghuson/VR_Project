@@ -46,9 +46,16 @@ public class UIControlPanel : MonoBehaviour
     public Button applyButton;                              // respawn at the chosen count
     public Text statsReadout;                               // live "mode  X.XX ms"
 
+    [Header("C1 - Environment & scene (auto-filled by the Tools menu)")]
+    public Slider gravitySlider;    public Text gravityValue;    // fluid gravity magnitude
+    public Slider bounceSlider;     public Text bounceValue;     // wall bounce (boundaryDamping)
+    public Slider canvasSizeSlider; public Text canvasSizeValue; // canvas world size
+    public Button motionButton;     public Text motionLabel;     // pendulum <-> circular
+
     // Snapshot of the scene's authored values, captured at Start, used by Reset.
     float defL, defAngle, defOmega, defViscosity, defHole, defSplat;
-    Color defColor; bool defHoleOpen;
+    float defGravity, defBounce, defCanvasSize;
+    Color defColor; bool defHoleOpen, defCircular;
 
     void Start()
     {
@@ -95,14 +102,41 @@ public class UIControlPanel : MonoBehaviour
         if (clearButton != null && canvas != null)
             clearButton.onClick.AddListener(() => canvas.Clear());
 
+        // C1 - environment & scene controls.
+        if (bucketFluid != null)
+        {
+            Bind(gravitySlider, gravityValue, -bucketFluid.gravity.y,
+                 v => bucketFluid.gravity = new Vector3(0f, -v, 0f), "0.00");
+            Bind(bounceSlider, bounceValue, bucketFluid.boundaryDamping,
+                 v => bucketFluid.boundaryDamping = v, "0.00");
+        }
+        if (canvas != null)
+            Bind(canvasSizeSlider, canvasSizeValue, canvas.transform.localScale.x,
+                 v => canvas.transform.localScale = new Vector3(v, 1f, v));
+        if (motionButton != null && bucket != null)
+        {
+            UpdateMotionLabel();
+            motionButton.onClick.AddListener(() =>
+            {
+                bucket.useCircularMotion = !bucket.useCircularMotion;
+                UpdateMotionLabel();
+            });
+        }
+
         // Remember the authored defaults so Reset can restore them.
-        if (bucket != null) { defL = bucket.l; defAngle = bucket.thetaMax; defOmega = bucket.omega; }
+        if (bucket != null)
+        {
+            defL = bucket.l; defAngle = bucket.thetaMax; defOmega = bucket.omega;
+            defCircular = bucket.useCircularMotion;
+        }
         if (bucketFluid != null)
         {
             defViscosity = bucketFluid.viscosity; defHole = bucketFluid.holeDiameter;
             defSplat = bucketFluid.splatRadius; defColor = bucketFluid.paintColor;
             defHoleOpen = bucketFluid.holeOpen;
+            defGravity = -bucketFluid.gravity.y; defBounce = bucketFluid.boundaryDamping;
         }
+        if (canvas != null) defCanvasSize = canvas.transform.localScale.x;
 
         if (saveButton != null && canvas != null)
             saveButton.onClick.AddListener(() => canvas.SavePng());
@@ -157,10 +191,20 @@ public class UIControlPanel : MonoBehaviour
             if (viscositySlider != null) viscositySlider.value = defViscosity;
             if (holeSlider      != null) holeSlider.value      = defHole;
             if (splatSlider     != null) splatSlider.value     = defSplat;
+            if (gravitySlider   != null) gravitySlider.value   = defGravity;
+            if (bounceSlider    != null) bounceSlider.value    = defBounce;
             SetPaintColor(defColor);
             bucketFluid.holeOpen = defHoleOpen;
             UpdateHoleLabel();
         }
+        if (canvasSizeSlider != null) canvasSizeSlider.value = defCanvasSize;
+        if (bucket != null) { bucket.useCircularMotion = defCircular; UpdateMotionLabel(); }
+    }
+
+    void UpdateMotionLabel()
+    {
+        if (motionLabel != null && bucket != null)
+            motionLabel.text = bucket.useCircularMotion ? "Motion: Circular" : "Motion: Pendulum";
     }
 
     void UpdateHoleLabel()

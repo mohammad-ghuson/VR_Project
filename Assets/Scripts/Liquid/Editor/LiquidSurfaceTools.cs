@@ -214,6 +214,54 @@ public static class LiquidSurfaceTools
         EditorUtility.SetDirty(go);
     }
 
+    // Interview step (b): one click puts the scene in a guaranteed "show state" for the
+    // painting demo — smooth particle count, wide swing, paint flowing immediately, side
+    // tank disabled (it costs FPS and plays no role here), camera framed on bucket+canvas.
+    // Values only; no logic is touched. Re-enable the tank objects to demo sloshing again.
+    [MenuItem("Tools/Liquid/Demo - Painting Preset")]
+    static void ApplyPaintingDemoPreset()
+    {
+        var bucketComp = Object.FindFirstObjectByType<Bucket>();
+        if (bucketComp == null) { Debug.LogError("[Demo] No Bucket component found in the scene."); return; }
+
+        SphFluid fluid = null;
+        foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+            if (f.containerShape == SphFluid.ContainerShape.Cylinder) { fluid = f; break; }
+        if (fluid == null) { Debug.LogError("[Demo] No bucket SphFluid (Cylinder) found in the scene."); return; }
+
+        // Wide, smooth pendulum swing.
+        Undo.RecordObject(bucketComp, "Painting Demo Preset");
+        bucketComp.enabled = true;
+        bucketComp.useCircularMotion = false;
+        bucketComp.l = 4f;
+        bucketComp.thetaMax = 45f;
+        bucketComp.omega = 1.5f;
+
+        // Paint tuned for the show: light particle load, hole open, clear strokes.
+        Undo.RecordObject(fluid, "Painting Demo Preset");
+        fluid.particleCount = 500;
+        fluid.holeOpen = true;
+        fluid.holeDiameter = 0.2f;
+        fluid.splatRadius = 0.18f;
+        fluid.paintColor = new Color(0.85f, 0.10f, 0.15f, 1f);
+        fluid.neighborMethod = SphFluid.NeighborMethod.SpatialHashGrid; // in case the O(n^2) demo left brute force on
+        if (Application.isPlaying) fluid.Respawn(500);                  // apply immediately during play
+
+        // The side tank costs FPS and plays no role in the painting act.
+        foreach (var name in new[] { "TankFluid", "PaintTank" })
+        {
+            var go = GameObject.Find(name);
+            if (go != null) { Undo.RecordObject(go, "Painting Demo Preset"); go.SetActive(false); }
+        }
+
+        // Known-good framing: bucket hanging center-frame, canvas below.
+        SetTransform("Main Camera", new Vector3(2.5f, 6f, 8f), new Vector3(24f, 180f, 0f), Vector3.one);
+
+        EditorSceneManager.MarkSceneDirty(bucketComp.gameObject.scene);
+        Debug.Log("[Demo] Painting preset applied: 500 particles, hole open, grid mode, wide swing, " +
+                  "side tank disabled, camera framed. Press Play.");
+    }
+
     [MenuItem("Tools/Liquid/Tank - T1 Create Transparent Tank")]
     static void CreatePaintTank()
     {
@@ -454,6 +502,7 @@ public static class LiquidSurfaceTools
         var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 1f; // match HEIGHT so the tall panel always fits vertically
 
         // A semi-transparent panel anchored to the top-left, ready to receive controls in M5.2.
         var panelGO = new GameObject("Panel", typeof(Image));
@@ -751,6 +800,155 @@ public static class LiquidSurfaceTools
         Debug.Log("[UI][S3] Added complexity demo panel (mode toggle, particle count, apply, live ms).", ctrl.gameObject);
     }
 
+    // Interview step (c1): the remaining PDF inputs — gravity, wall bounce (friction-like),
+    // canvas size, and the motion mode (pendulum/circular, already in Bucket.cs but never
+    // exposed). Built as a separate right-side panel so the main panel layout is untouched.
+    [MenuItem("Tools/Liquid/UI - C1 Add Environment Controls")]
+    static void AddEnvironmentControls()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][C1] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+
+        if (ctrl.bucket == null) ctrl.bucket = Object.FindFirstObjectByType<Bucket>();
+        if (ctrl.canvas == null) ctrl.canvas = Object.FindFirstObjectByType<PaintCanvas>();
+        if (ctrl.bucketFluid == null)
+            foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+                if (f.containerShape == SphFluid.ContainerShape.Cylinder) { ctrl.bucketFluid = f; break; }
+        if (ctrl.bucketFluid == null) { Debug.LogError("[UI][C1] No bucket SphFluid (Cylinder) found."); return; }
+
+        var old = ctrl.transform.Find("EnvPanel");
+        if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+
+        // Below the complexity demo panel (top-right at -20..-220).
+        var panelGO = new GameObject("EnvPanel", typeof(Image));
+        var prt = (RectTransform)panelGO.transform;
+        prt.SetParent(ctrl.transform, false);
+        prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
+        prt.pivot = new Vector2(1f, 1f);
+        prt.anchoredPosition = new Vector2(-20f, -240f);
+        prt.sizeDelta = new Vector2(360f, 360f);   // 360 so the 336-wide rows fit with padding
+        panelGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f); // dark like the main panel -> white labels read
+
+        NewLabel(prt, "Environment & Scene", 12f, 8f, 316f, 26f, TextAnchor.MiddleLeft);
+
+        // Rows live in a child container shifted below the title.
+        var rows = new GameObject("Rows", typeof(RectTransform));
+        var rrt = (RectTransform)rows.transform;
+        rrt.SetParent(prt, false);
+        rrt.anchorMin = rrt.anchorMax = new Vector2(0f, 1f);
+        rrt.pivot = new Vector2(0f, 1f);
+        rrt.anchoredPosition = new Vector2(0f, -40f);
+        rrt.sizeDelta = new Vector2(340f, 250f);
+
+        var fluid = ctrl.bucketFluid;
+        float canvasSize = ctrl.canvas != null ? ctrl.canvas.transform.localScale.x : 6f;
+        ctrl.gravitySlider    = BuildControlRow(rrt, "Gravity",     0f, 20f, -fluid.gravity.y,       0, out ctrl.gravityValue);
+        ctrl.bounceSlider     = BuildControlRow(rrt, "Wall Bounce", 0f, 1f,  fluid.boundaryDamping,  1, out ctrl.bounceValue);
+        ctrl.canvasSizeSlider = BuildControlRow(rrt, "Canvas Size", 2f, 10f, canvasSize,             2, out ctrl.canvasSizeValue);
+
+        ctrl.motionButton = NewButton(prt, "Motion", 12f, 300f, 336f, 36f, new Color(0.20f, 0.40f, 0.60f, 1f), out ctrl.motionLabel);
+        ctrl.motionButton.name = "MotionButton";
+        ctrl.motionLabel.text = ctrl.bucket != null && ctrl.bucket.useCircularMotion ? "Motion: Circular" : "Motion: Pendulum";
+
+        if (ctrl.canvas == null)
+            Debug.LogWarning("[UI][C1] No PaintCanvas found — the Canvas Size slider will be inert until one exists.");
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][C1] Added Environment panel (gravity, wall bounce, canvas size, motion toggle).", ctrl.gameObject);
+    }
+
+    // Interview step (c2): visual polish. Adds a title + section headers to the main panel
+    // (repositioning the existing rows by name), restyles the Environment panel to the dark
+    // theme so its white labels are readable, and re-asserts the demo panel's blue labels.
+    // Layout only — no behaviour changes.
+    [MenuItem("Tools/Liquid/UI - C2 Polish Panels")]
+    static void PolishPanels()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][C2] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+        var panel = ctrl.transform.Find("Panel") as RectTransform;
+        if (panel == null) { Debug.LogError("[UI][C2] 'Panel' not found under ControlPanelUI."); return; }
+
+        Undo.RegisterFullObjectHierarchyUndo(ctrl.gameObject, "Polish Panels");
+
+        // Scale the UI by window HEIGHT so the tall panel always fits, even in short views.
+        var scaler = ctrl.GetComponent<CanvasScaler>();
+        if (scaler != null) scaler.matchWidthOrHeight = 1f;
+
+        // --- 1) Main panel: title + section headers, rows shifted to make room ---
+        foreach (var n in new[] { "PanelTitle", "MotionHeader", "LiquidHeader", "ColorHeader" })
+        {
+            var o = panel.Find(n);
+            if (o != null) Undo.DestroyObjectImmediate(o.gameObject);
+        }
+
+        var title = NewLabel(panel, "Paint Controls", 12f, 10f, 336f, 30f, TextAnchor.MiddleCenter);
+        title.name = "PanelTitle";
+
+        var headerColor = new Color(0.55f, 0.78f, 1f, 1f);
+        void Header(string name, string text, float y)
+        {
+            var h = NewLabel(panel, text, 12f, y, 336f, 24f, TextAnchor.MiddleLeft);
+            h.name = name; h.color = headerColor; h.fontSize = 20;
+        }
+        Header("MotionHeader", "Motion", 48f);
+        Header("LiquidHeader", "Liquid", 312f);
+        Header("ColorHeader",  "Color",  576f);
+
+        // Reposition every existing row under its section header.
+        SetRowY(panel, "RopeLengthRow",   76f);
+        SetRowY(panel, "ReleaseAngleRow", 156f);
+        SetRowY(panel, "SpeedRow",        236f);
+        SetRowY(panel, "ViscosityRow",    340f);
+        SetRowY(panel, "HoleDiameterRow", 420f);
+        SetRowY(panel, "SplatWidthRow",   500f);
+        SetRowY(panel, "PaintColorRow",   604f);
+        SetRowY(panel, "RedRow",          684f);
+        SetRowY(panel, "GreenRow",        764f);
+        SetRowY(panel, "BlueRow",         844f);
+        SetRowY(panel, "ActionsRow",      924f);
+        SetRowY(panel, "SaveResetRow",    972f);
+        panel.sizeDelta = new Vector2(360f, 1020f);
+
+        // --- 2) Environment panel: dark theme + readable labels ---
+        var env = ctrl.transform.Find("EnvPanel") as RectTransform;
+        if (env != null)
+        {
+            env.sizeDelta = new Vector2(360f, 360f);
+            env.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
+            foreach (var t in env.GetComponentsInChildren<Text>(true))
+            { t.color = Color.white; t.verticalOverflow = VerticalWrapMode.Overflow; }
+            var mb = env.Find("MotionButton");
+            if (mb != null)
+            {
+                mb.GetComponent<Image>().color = new Color(0.20f, 0.40f, 0.60f, 1f);
+                var mrt = (RectTransform)mb.transform;
+                mrt.sizeDelta = new Vector2(336f, 36f);
+            }
+        }
+
+        // --- 3) Demo panel: make sure its labels are the blue theme (idempotent) ---
+        var demo = ctrl.transform.Find("DemoPanel") as RectTransform;
+        if (demo != null)
+        {
+            var blue = new Color(0.10f, 0.35f, 0.85f, 1f);
+            foreach (var t in demo.GetComponentsInChildren<Text>(true))
+            { t.color = blue; t.verticalOverflow = VerticalWrapMode.Overflow; }
+        }
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][C2] Panels polished: title + section headers, dark Environment panel, blue demo labels.");
+    }
+
+    static void SetRowY(RectTransform panel, string name, float y)
+    {
+        var r = panel.Find(name) as RectTransform;
+        if (r != null) r.anchoredPosition = new Vector2(12f, -y);
+        else Debug.LogWarning("[UI][C2] Row '" + name + "' not found (skipped) — run its build menu first.");
+    }
+
     // A "Paint Color" row: a left label plus a strip of clickable preset color swatches.
     static void BuildColorSwatches(RectTransform panel, UIControlPanel ctrl, int index)
     {
@@ -847,6 +1045,9 @@ public static class LiquidSurfaceTools
         t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         t.fontSize = 26;
         t.fontStyle = FontStyle.Bold;
+        // Draw even when the rect is shorter than the font's line height — otherwise
+        // Unity's Truncate mode hides the WHOLE line (the "invisible title" bug).
+        t.verticalOverflow = VerticalWrapMode.Overflow;
         t.color = Color.white;
         t.alignment = anchor;
         t.text = text;

@@ -300,7 +300,10 @@ public class SphFluid : MonoBehaviour
         fpsSmooth = Mathf.Lerp(fpsSmooth, 1f / Mathf.Max(Time.deltaTime, 1e-5f), 0.1f);
         int n = positions != null ? positions.Length : 0;
         string mode = neighborMethod == NeighborMethod.BruteForce ? "BruteForce O(n^2)" : "Grid O(n)";
-        GUI.Label(new Rect(12, 10, 780, 24),
+        // Bottom strip, STARTING RIGHT OF the main panel (which is 380 UI units wide and
+        // height-scaled), so the HUD can never overlap the panel's bottom buttons.
+        float x = 400f * Screen.height / 1080f;
+        GUI.Label(new Rect(x, Screen.height - 30, Screen.width - x - 12, 24),
             $"SPH  total:{n}  in-bucket:{inBucketCount}  drained:{drainedCount}  flow:{flowRateSmooth:F0}/s   FPS:{fpsSmooth:F0}   mode:{mode}   neighbours:{neighborMsSmooth:F2} ms");
     }
 
