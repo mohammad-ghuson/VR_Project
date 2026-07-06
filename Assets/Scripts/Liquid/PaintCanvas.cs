@@ -19,6 +19,16 @@ public class PaintCanvas : MonoBehaviour
     Vector2Int lastPx;   // M4.3: previous stamp pixel, to connect into continuous strokes
     bool hasLast;
 
+    // M6.1 - experiment statistics (PDF outputs 5 & 7), kept incrementally so they cost
+    // nothing per frame: number of distinct trails, and how many pixels ever got paint.
+    int strokeCount;     // a new trail starts whenever a stamp does NOT connect to the last
+    int paintedCount;    // pixels painted at least once (visible blend)
+    bool[] painted;      // per-pixel "was ever painted" flag
+
+    public int StrokeCount => strokeCount;
+    public float CoveragePercent =>
+        pixels != null && pixels.Length > 0 ? paintedCount * 100f / pixels.Length : 0f;
+
     // --- Analytic plane (world space), refreshed each frame so it follows the transform ---
     public Vector3 PlaneCenter { get; private set; }
     public Vector3 PlaneNormal { get; private set; }   // the face paint lands on (local +Y)
@@ -50,6 +60,7 @@ public class PaintCanvas : MonoBehaviour
             int res = Mathf.Max(64, textureResolution);
             tex = new Texture2D(res, res, TextureFormat.RGBA32, false);
             pixels = new Color32[res * res];
+            painted = new bool[res * res];
             Clear();
         }
         if (rend != null && rend.sharedMaterial != null)
@@ -66,6 +77,11 @@ public class PaintCanvas : MonoBehaviour
         tex.Apply(false);
         dirty = false;
         hasLast = false;
+
+        // A cleared canvas starts a fresh experiment's statistics.
+        if (painted != null) System.Array.Clear(painted, 0, painted.Length);
+        paintedCount = 0;
+        strokeCount = 0;
     }
 
     // M5.5 - Save the current artwork as a PNG file and return its full path.
@@ -110,9 +126,14 @@ public class PaintCanvas : MonoBehaviour
         // Connect nearby hits into a continuous stroke; far jumps just dot.
         float gap = Vector2.Distance(new Vector2(cx, cy), lastPx);
         if (hasLast && gap < tex.width * 0.06f)
-            StampLine(lastPx.x, lastPx.y, cx, cy, rPx, c32);
+        {
+            StampLine(lastPx.x, lastPx.y, cx, cy, rPx, c32); // continues the current trail
+        }
         else
+        {
             StampCircle(cx, cy, rPx, c32);
+            strokeCount++;                                   // a NEW separate trail begins
+        }
 
         lastPx = new Vector2Int(cx, cy);
         hasLast = true;
@@ -142,6 +163,10 @@ public class PaintCanvas : MonoBehaviour
                 if (a <= 0f) continue;
                 int idx = row + x;
                 pixels[idx] = Color32.Lerp(pixels[idx], col, a);
+                // M6.1: count each pixel once, when it first receives a visible amount
+                // of paint (>= 10% blend) — gives the colour-spread area for the report.
+                if (a >= 0.1f && painted != null && !painted[idx])
+                { painted[idx] = true; paintedCount++; }
             }
         }
         dirty = true;

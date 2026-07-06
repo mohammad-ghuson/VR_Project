@@ -89,6 +89,12 @@ public class SphFluid : MonoBehaviour
     int inBucketCount;         // particles still inside the bucket
     float flowRateSmooth;      // drained particles per second (smoothed)
 
+    // M6.1 - experiment statistics (PDF output 7)
+    int deadCountTotal;        // particles consumed (painted the canvas or despawned)
+    float motionTime;          // seconds from the first outflow until all paint is used
+    public float MotionTime => motionTime;
+    public int PaintUsed => deadCountTotal;
+
     // Moving-container state (Step E). The cylinder follows the bucket each frame.
     Mesh particleMesh;
     bool spawned;
@@ -194,6 +200,11 @@ public class SphFluid : MonoBehaviour
             flowRateSmooth = Mathf.Lerp(flowRateSmooth, instRate, 0.1f);
         }
         lastDrained = drainedCount;
+
+        // M6.1: the experiment clock runs from the first outflow until every particle
+        // has been consumed (painted or despawned) — i.e. while painting is happening.
+        if (drainedCount > 0 && positions != null && deadCountTotal < positions.Length)
+            motionTime += Time.deltaTime;
     }
 
     // Step F: draw all particles in one instanced call (no GameObject per particle).
@@ -303,8 +314,23 @@ public class SphFluid : MonoBehaviour
         // Bottom strip, STARTING RIGHT OF the main panel (which is 380 UI units wide and
         // height-scaled), so the HUD can never overlap the panel's bottom buttons.
         float x = 400f * Screen.height / 1080f;
-        GUI.Label(new Rect(x, Screen.height - 30, Screen.width - x - 12, 24),
+
+        // M6.1 - experiment line (PDF outputs 5 & 7): motion time, trails, colour spread.
+        if (paintCanvas != null)
+            ShadowLabel(new Rect(x, Screen.height - 54, Screen.width - x - 12, 24),
+                $"Experiment  time:{motionTime:F1}s  trails:{paintCanvas.StrokeCount}  coverage:{paintCanvas.CoveragePercent:F1}%  paint-used:{deadCountTotal}/{n}");
+
+        ShadowLabel(new Rect(x, Screen.height - 30, Screen.width - x - 12, 24),
             $"SPH  total:{n}  in-bucket:{inBucketCount}  drained:{drainedCount}  flow:{flowRateSmooth:F0}/s   FPS:{fpsSmooth:F0}   mode:{mode}   neighbours:{neighborMsSmooth:F2} ms");
+    }
+
+    // White text with a black drop-shadow so the HUD stays readable over the white canvas.
+    static void ShadowLabel(Rect r, string text)
+    {
+        GUI.color = new Color(0f, 0f, 0f, 0.8f);
+        GUI.Label(new Rect(r.x + 1, r.y + 1, r.width, r.height), text);
+        GUI.color = Color.white;
+        GUI.Label(r, text);
     }
 
     // --- S3: public API for the on-screen complexity-demo controls ---
@@ -438,9 +464,9 @@ public class SphFluid : MonoBehaviour
                 // otherwise remove it once it falls past the despawn plane.
                 if (paintCanvas != null &&
                     paintCanvas.TryPaint(positions[i], particleRadius, paintColor, splatRadius))
-                    dead[i] = true;
+                { dead[i] = true; deadCountTotal++; }
                 else if (positions[i].y < despawnBelowY)
-                    dead[i] = true;
+                { dead[i] = true; deadCountTotal++; }
             }
         }
     }
@@ -776,6 +802,10 @@ public class SphFluid : MonoBehaviour
 
     void SpawnParticles()
     {
+        // Fresh spawn = fresh experiment statistics.
+        deadCountTotal = 0;
+        motionTime = 0f;
+
         positions = new Vector3[particleCount];
         velocities = new Vector3[particleCount];
         density = new float[particleCount];

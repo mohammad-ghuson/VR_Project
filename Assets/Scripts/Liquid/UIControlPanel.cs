@@ -52,10 +52,25 @@ public class UIControlPanel : MonoBehaviour
     public Slider canvasSizeSlider; public Text canvasSizeValue; // canvas world size
     public Button motionButton;     public Text motionLabel;     // pendulum <-> circular
 
+    [Header("M6.3 - Comparison (auto-filled by the Tools menu)")]
+    public Text comparisonText;   // live "previous -> current" experiment table
+
     // Snapshot of the scene's authored values, captured at Start, used by Reset.
     float defL, defAngle, defOmega, defViscosity, defHole, defSplat;
     float defGravity, defBounce, defCanvasSize;
     Color defColor; bool defHoleOpen, defCircular;
+
+    // M6.3 - one experiment's inputs + results, for the comparison table.
+    struct Snapshot
+    {
+        public bool valid;
+        public float rope, angle, speed, gravity, viscosity, hole, canvasSize, time, coverage;
+        public int trails, used, total;
+        public bool circular;
+        public Color colour;
+    }
+    Snapshot prevExp;        // captured whenever the user saves an experiment
+    float comparisonTimer;
 
     void Start()
     {
@@ -139,7 +154,7 @@ public class UIControlPanel : MonoBehaviour
         if (canvas != null) defCanvasSize = canvas.transform.localScale.x;
 
         if (saveButton != null && canvas != null)
-            saveButton.onClick.AddListener(() => canvas.SavePng());
+            saveButton.onClick.AddListener(SaveExperiment);
         if (resetButton != null)
             resetButton.onClick.AddListener(ResetDefaults);
 
@@ -168,6 +183,66 @@ public class UIControlPanel : MonoBehaviour
         if (statsReadout != null && bucketFluid != null)
             statsReadout.text = (bucketFluid.IsBruteForce ? "Brute O(n^2)" : "Grid O(n)")
                               + "   " + bucketFluid.NeighborMs.ToString("0.00") + " ms";
+
+        // M6.3 - refresh the "previous -> current" table 4x per second.
+        if (comparisonText != null)
+        {
+            comparisonTimer += Time.deltaTime;
+            if (comparisonTimer >= 0.25f)
+            {
+                comparisonTimer = 0f;
+                comparisonText.text = BuildComparison();
+            }
+        }
+    }
+
+    // M6.3 - capture the current experiment (inputs + measured results).
+    Snapshot Capture()
+    {
+        var s = new Snapshot { valid = true };
+        if (bucket != null)
+        {
+            s.rope = bucket.l; s.angle = bucket.thetaMax; s.speed = bucket.omega;
+            s.circular = bucket.useCircularMotion;
+        }
+        if (bucketFluid != null)
+        {
+            s.gravity = -bucketFluid.gravity.y; s.viscosity = bucketFluid.viscosity;
+            s.hole = bucketFluid.holeDiameter; s.colour = bucketFluid.paintColor;
+            s.time = bucketFluid.MotionTime; s.used = bucketFluid.PaintUsed;
+            s.total = bucketFluid.ParticleCount;
+        }
+        if (canvas != null)
+        {
+            s.canvasSize = canvas.transform.localScale.x;
+            s.trails = canvas.StrokeCount; s.coverage = canvas.CoveragePercent;
+        }
+        return s;
+    }
+
+    string BuildComparison()
+    {
+        if (!prevExp.valid)
+            return "No saved experiment yet.\nPress 'Save PNG' to record one,\nthen change values and run again.";
+
+        Snapshot p = prevExp, c = Capture();
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("previous -> current");
+        sb.AppendLine($"Rope       {p.rope:0.#} -> {c.rope:0.#}");
+        sb.AppendLine($"Angle      {p.angle:0.#} -> {c.angle:0.#}");
+        sb.AppendLine($"Speed      {p.speed:0.#} -> {c.speed:0.#}");
+        sb.AppendLine($"Motion     {(p.circular ? "Circular" : "Pendulum")} -> {(c.circular ? "Circular" : "Pendulum")}");
+        sb.AppendLine($"Gravity    {p.gravity:0.##} -> {c.gravity:0.##}");
+        sb.AppendLine($"Viscosity  {p.viscosity:0.#} -> {c.viscosity:0.#}");
+        sb.AppendLine($"Hole       {p.hole:0.##} -> {c.hole:0.##}");
+        sb.AppendLine($"Colour     #{ColorUtility.ToHtmlStringRGB(p.colour)} -> #{ColorUtility.ToHtmlStringRGB(c.colour)}");
+        sb.AppendLine($"Canvas     {p.canvasSize:0.#} -> {c.canvasSize:0.#}");
+        sb.AppendLine("--------- results ---------");
+        sb.AppendLine($"Time       {p.time:0.#}s -> {c.time:0.#}s");
+        sb.AppendLine($"Trails     {p.trails} -> {c.trails}");
+        sb.AppendLine($"Coverage   {p.coverage:0.#}% -> {c.coverage:0.#}%");
+        sb.Append($"Paint      {p.used}/{p.total} -> {c.used}/{c.total}");
+        return sb.ToString();
     }
 
     void UpdateMethodLabel()
@@ -205,6 +280,57 @@ public class UIControlPanel : MonoBehaviour
     {
         if (motionLabel != null && bucket != null)
             motionLabel.text = bucket.useCircularMotion ? "Motion: Circular" : "Motion: Pendulum";
+    }
+
+    // M6.2 - save the painting AND a text report of the whole experiment (PDF output 7):
+    // every input plus the measured results, written next to the PNG with the same name.
+    public void SaveExperiment()
+    {
+        if (canvas == null) return;
+        string imgPath = canvas.SavePng();
+        if (string.IsNullOrEmpty(imgPath)) return;
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Swinging Paint Bucket - Experiment Report");
+        sb.AppendLine("Saved:  " + System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+        sb.AppendLine("Image:  " + System.IO.Path.GetFileName(imgPath));
+        sb.AppendLine();
+        sb.AppendLine("[Inputs]");
+        if (bucket != null)
+        {
+            sb.AppendLine($"Rope length:        {bucket.l:0.##}");
+            sb.AppendLine($"Release angle:      {bucket.thetaMax:0.##} deg");
+            sb.AppendLine($"Speed (omega):      {bucket.omega:0.##}");
+            sb.AppendLine($"Motion mode:        {(bucket.useCircularMotion ? "Circular" : "Pendulum")}");
+        }
+        if (bucketFluid != null)
+        {
+            sb.AppendLine($"Gravity:            {-bucketFluid.gravity.y:0.##}");
+            sb.AppendLine($"Wall bounce:        {bucketFluid.boundaryDamping:0.##}");
+            sb.AppendLine($"Viscosity:          {bucketFluid.viscosity:0.##}");
+            sb.AppendLine($"Hole diameter:      {bucketFluid.holeDiameter:0.##} ({(bucketFluid.holeOpen ? "open" : "closed")})");
+            sb.AppendLine($"Splat width:        {bucketFluid.splatRadius:0.##}");
+            Color c = bucketFluid.paintColor;
+            sb.AppendLine($"Paint colour (RGB): {c.r:0.##}, {c.g:0.##}, {c.b:0.##}");
+            sb.AppendLine($"Paint amount:       {bucketFluid.ParticleCount} particles");
+        }
+        sb.AppendLine($"Canvas size:        {canvas.transform.localScale.x:0.##}");
+        sb.AppendLine();
+        sb.AppendLine("[Results]");
+        if (bucketFluid != null)
+        {
+            sb.AppendLine($"Motion time:        {bucketFluid.MotionTime:0.#} s");
+            sb.AppendLine($"Paint used:         {bucketFluid.PaintUsed} / {bucketFluid.ParticleCount}");
+        }
+        sb.AppendLine($"Number of trails:   {canvas.StrokeCount}");
+        sb.AppendLine($"Colour spread area: {canvas.CoveragePercent:0.#} % of the canvas");
+
+        string txtPath = System.IO.Path.ChangeExtension(imgPath, ".txt");
+        System.IO.File.WriteAllText(txtPath, sb.ToString());
+        Debug.Log("[Experiment] Report saved to: " + txtPath);
+
+        // M6.3: a saved experiment becomes the "previous" side of the comparison table.
+        prevExp = Capture();
     }
 
     void UpdateHoleLabel()

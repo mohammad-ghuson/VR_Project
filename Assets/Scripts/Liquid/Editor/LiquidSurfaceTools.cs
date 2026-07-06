@@ -949,6 +949,41 @@ public static class LiquidSurfaceTools
         else Debug.LogWarning("[UI][C2] Row '" + name + "' not found (skipped) — run its build menu first.");
     }
 
+    // M6.3 (PDF output 6): a right-side panel showing "previous -> current" experiment
+    // values and results, refreshed live by UIControlPanel. Saving an experiment makes it
+    // the "previous" column.
+    [MenuItem("Tools/Liquid/UI - M6.3 Add Comparison Panel")]
+    static void AddComparisonPanel()
+    {
+        var ctrl = Object.FindFirstObjectByType<UIControlPanel>();
+        if (ctrl == null) { Debug.LogError("[UI][M6.3] No ControlPanelUI in the scene. Run M5.1 first."); return; }
+
+        var old = ctrl.transform.Find("ComparePanel");
+        if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
+
+        // Below the Environment panel (which ends at -600).
+        var panelGO = new GameObject("ComparePanel", typeof(Image));
+        var prt = (RectTransform)panelGO.transform;
+        prt.SetParent(ctrl.transform, false);
+        prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
+        prt.pivot = new Vector2(1f, 1f);
+        prt.anchoredPosition = new Vector2(-20f, -620f);
+        prt.sizeDelta = new Vector2(360f, 400f);
+        panelGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
+
+        NewLabel(prt, "Experiment Comparison", 12f, 8f, 336f, 26f, TextAnchor.MiddleLeft);
+
+        var txt = NewLabel(prt, "-", 12f, 44f, 336f, 344f, TextAnchor.UpperLeft);
+        txt.name = "ComparisonText";
+        txt.fontSize = 18;
+        txt.fontStyle = FontStyle.Normal;
+        ctrl.comparisonText = txt;
+
+        EditorUtility.SetDirty(ctrl);
+        EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
+        Debug.Log("[UI][M6.3] Added the Experiment Comparison panel (previous -> current).", ctrl.gameObject);
+    }
+
     // A "Paint Color" row: a left label plus a strip of clickable preset color swatches.
     static void BuildColorSwatches(RectTransform panel, UIControlPanel ctrl, int index)
     {
