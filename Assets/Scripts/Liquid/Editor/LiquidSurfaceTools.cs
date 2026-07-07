@@ -5,144 +5,13 @@ using UnityEngine.EventSystems;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-// Phase 1 - Step 0 + Step 1 ONLY.
-// Step 0: inspect the bucket and report its real bounds (measured inside Unity).
-// Step 1: create a flat "LiquidSurface" disc sized/positioned inside the bucket.
-// No custom shader is authored here (see plan). A simple URP/Lit colored material
-// is created only so the disc is visible for the initial visual test.
+// Editor-only setup tools for the liquid project (menu: Tools/Liquid/...).
+// The old "flat liquid surface disc" approach (former Steps 0-3) has been removed:
+// the fluid is now a hand-written SPH particle system (SphFluid) inside a procedurally
+// generated bucket (ProceduralBucket). What remains here builds the SPH fluid, the tank,
+// the canvas, the UI, the rope, and the procedural bucket.
 public static class LiquidSurfaceTools
 {
-    // --- Tunables: edit then re-run, or tweak the created object in the Inspector ---
-    const float InnerRadiusFactor = 0.85f; // liquid radius = outer radius * this
-    const float FillLevel = 0.5f;          // 0 = bucket bottom, 1 = bucket top
-    const int   DiscSegments = 64;         // resolution of the hand-built disc mesh
-
-    [MenuItem("Tools/Liquid/Step 0 - Inspect Bucket")]
-    static void InspectBucket()
-    {
-        var go = Selection.activeGameObject;
-        if (go == null) { Debug.LogError("[Liquid] Select the Bucket GameObject in the Hierarchy first."); return; }
-        if (!TryGetBounds(go, out Bounds b)) { Debug.LogError("[Liquid] No Renderer found under '" + go.name + "'. Is this the bucket?"); return; }
-
-        Vector3 c = b.center, s = b.size;
-        float radius = Mathf.Min(s.x, s.z) * 0.5f;
-        Debug.Log(
-            "[Liquid][Step0] Bucket: " + go.name +
-            "\n World center : " + c.ToString("F3") +
-            "\n World size   : " + s.ToString("F3") +
-            "\n Bottom Y     : " + (c.y - s.y * 0.5f).ToString("F3") +
-            "\n Top Y        : " + (c.y + s.y * 0.5f).ToString("F3") +
-            "\n Outer radius (min XZ half) : " + radius.ToString("F3") +
-            "\n Suggested inner radius (x" + InnerRadiusFactor + ") : " + (radius * InnerRadiusFactor).ToString("F3") +
-            "\n Pivot (transform.position) : " + go.transform.position.ToString("F3") +
-            "\n LossyScale   : " + go.transform.lossyScale.ToString("F3") +
-            "\n NOTE: inner radius is approximated from the OUTER AABB (the FBX is not readable, " +
-            "so true wall geometry can't be measured here). Confirm visually that the disc sits inside the walls.",
-            go);
-    }
-
-    [MenuItem("Tools/Liquid/Step 1 - Create Liquid Surface")]
-    static void CreateLiquidSurface()
-    {
-        var bucket = Selection.activeGameObject;
-        if (bucket == null) { Debug.LogError("[Liquid] Select the Bucket GameObject in the Hierarchy first."); return; }
-
-        var existing = bucket.transform.Find("LiquidSurface");
-        if (existing != null)
-        {
-            Debug.LogWarning("[Liquid] 'LiquidSurface' already exists. Delete it before recreating.", existing.gameObject);
-            Selection.activeObject = existing.gameObject;
-            return;
-        }
-
-        if (!TryGetBounds(bucket, out Bounds b)) { Debug.LogError("[Liquid] No Renderer found under '" + bucket.name + "'."); return; }
-
-        Vector3 c = b.center, s = b.size;
-        float radiusWorld = Mathf.Min(s.x, s.z) * 0.5f * InnerRadiusFactor;
-
-        // Build the object ourselves: no Unity primitive => no built-in mesh and no collider.
-        var disc = new GameObject("LiquidSurface");
-        Undo.RegisterCreatedObjectUndo(disc, "Create Liquid Surface");
-        var mf = disc.AddComponent<MeshFilter>();
-        var mr = disc.AddComponent<MeshRenderer>();
-        mf.sharedMesh = CreateOrLoadDiscMesh();
-        mr.sharedMaterial = CreatePaintMaterial();
-
-        Undo.SetTransformParent(disc.transform, bucket.transform, "Parent Liquid Surface");
-
-        // World placement at the chosen fill level.
-        float bottom = c.y - s.y * 0.5f;
-        disc.transform.position = new Vector3(c.x, bottom + FillLevel * s.y, c.z);
-        disc.transform.rotation = Quaternion.identity;
-
-        // Our disc mesh has radius 0.5 (diameter 1) and is flat, so world diameter = scale.x.
-        // Convert desired WORLD size into local scale to cancel the parent's scale.
-        Vector3 ws = new Vector3(radiusWorld * 2f, 1f, radiusWorld * 2f);
-        Vector3 ps = bucket.transform.lossyScale;
-        disc.transform.localScale = new Vector3(
-            ws.x / Mathf.Max(Mathf.Abs(ps.x), 1e-5f),
-            ws.y / Mathf.Max(Mathf.Abs(ps.y), 1e-5f),
-            ws.z / Mathf.Max(Mathf.Abs(ps.z), 1e-5f));
-
-        Selection.activeObject = disc;
-        EditorSceneManager.MarkSceneDirty(disc.scene);
-        Debug.Log("[Liquid][Step1] Created 'LiquidSurface' under '" + bucket.name +
-                  "' at fill " + FillLevel + ", world radius " + radiusWorld.ToString("F3") +
-                  ". Fine-tune by editing its transform if needed.", disc);
-    }
-
-    [MenuItem("Tools/Liquid/Step 2 - Add Liquid Controller")]
-    static void AddLiquidController()
-    {
-        var sel = Selection.activeGameObject;
-        if (sel == null) { Debug.LogError("[Liquid] Select the Bucket or the LiquidSurface first."); return; }
-
-        Transform surface = sel.name == "LiquidSurface" ? sel.transform : sel.transform.Find("LiquidSurface");
-        if (surface == null) { Debug.LogError("[Liquid] No 'LiquidSurface' found under '" + sel.name + "'. Run Step 1 first."); return; }
-
-        if (surface.GetComponent<LiquidController>() != null)
-        {
-            Debug.LogWarning("[Liquid] LiquidController is already attached.", surface.gameObject);
-            Selection.activeObject = surface.gameObject;
-            return;
-        }
-
-        Undo.AddComponent<LiquidController>(surface.gameObject);
-        Selection.activeObject = surface.gameObject;
-        EditorSceneManager.MarkSceneDirty(surface.gameObject.scene);
-        Debug.Log("[Liquid][Step2] Added LiquidController to 'LiquidSurface'. " +
-                  "Rotate the Bucket in the Scene view and confirm the surface stays level.", surface.gameObject);
-    }
-
-    [MenuItem("Tools/Liquid/Step 3 - Apply Liquid Shader")]
-    static void ApplyLiquidShader()
-    {
-        if (Shader.Find("Custom/LiquidPaint") == null)
-        {
-            Debug.LogError("[Liquid] Shader 'Custom/LiquidPaint' not found. " +
-                           "Make sure LiquidPaint.shader compiled (check the Console for shader errors).");
-            return;
-        }
-
-        var mat = CreatePaintMaterial(); // creates the material or swaps its shader to ours
-
-        // Make sure the existing LiquidSurface uses this material.
-        var sel = Selection.activeGameObject;
-        Transform surface = null;
-        if (sel != null) surface = sel.name == "LiquidSurface" ? sel.transform : sel.transform.Find("LiquidSurface");
-        if (surface != null)
-        {
-            var r = surface.GetComponent<Renderer>();
-            if (r != null) r.sharedMaterial = mat;
-            EditorSceneManager.MarkSceneDirty(surface.gameObject.scene);
-        }
-
-        EditorUtility.SetDirty(mat);
-        AssetDatabase.SaveAssets();
-        Debug.Log("[Liquid][Step3] Applied 'Custom/LiquidPaint' to the LiquidPaint material. " +
-                  "Tune Base/Rim/Specular on the material in the Inspector.", mat);
-    }
-
     [MenuItem("Tools/Liquid/Step 4 - Add Bucket Tilt")]
     static void AddBucketTilt()
     {
@@ -998,6 +867,115 @@ public static class LiquidSurfaceTools
         Debug.Log("[UI][M6.3] Added the Experiment Comparison panel (previous -> current).", ctrl.gameObject);
     }
 
+    [MenuItem("Tools/Liquid/Rope - Add Visible Rope")]
+    static void AddVisibleRope()
+    {
+        var bucket = Object.FindFirstObjectByType<Bucket>();
+        if (bucket == null) { Debug.LogError("[Rope] No Bucket found in the scene."); return; }
+
+        // Rebuild cleanly on re-run.
+        var existing = GameObject.Find("Rope");
+        if (existing != null && existing.GetComponent<Rope>() != null) Undo.DestroyObjectImmediate(existing);
+        var existingAnchor = GameObject.Find("RopeAnchor");
+        if (existingAnchor != null) Undo.DestroyObjectImmediate(existingAnchor);
+
+        var sh = Shader.Find("Universal Render Pipeline/Lit");
+
+        // Built-in cylinder mesh, but strip the collider — constraint: no physics colliders.
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        go.name = "Rope";
+        var col = go.GetComponent<Collider>();
+        if (col != null) Object.DestroyImmediate(col);
+        if (sh != null)
+        {
+            var mat = new Material(sh);
+            var brown = new Color(0.35f, 0.24f, 0.12f, 1f);
+            mat.SetColor("_BaseColor", brown); mat.color = brown;
+            go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+        }
+
+        // Visible suspension point (anchor) — a small dark sphere pinned at the pivot.
+        var anchor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        anchor.name = "RopeAnchor";
+        var acol = anchor.GetComponent<Collider>();
+        if (acol != null) Object.DestroyImmediate(acol);
+        anchor.transform.localScale = Vector3.one * 0.15f;
+        if (sh != null)
+        {
+            var amat = new Material(sh);
+            var dark = new Color(0.15f, 0.15f, 0.17f, 1f);
+            amat.SetColor("_BaseColor", dark); amat.color = dark;
+            anchor.GetComponent<MeshRenderer>().sharedMaterial = amat;
+        }
+
+        var rope = go.AddComponent<Rope>();
+        rope.bucket = bucket;
+        rope.anchor = anchor.transform;
+
+        Undo.RegisterCreatedObjectUndo(go, "Add Visible Rope");
+        Undo.RegisterCreatedObjectUndo(anchor, "Add Rope Anchor");
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Selection.activeGameObject = go;
+        Debug.Log("[Rope] Added a visible rope + suspension anchor (no colliders) wired to the Bucket. " +
+                  "Constant length; fully visible in Play mode.", go);
+    }
+
+    [MenuItem("Tools/Liquid/Bucket - Build Procedural Bucket")]
+    static void BuildProceduralBucket()
+    {
+        var bucketComp = Object.FindFirstObjectByType<Bucket>();
+        if (bucketComp == null) { Debug.LogError("[Bucket] No Bucket found in the scene."); return; }
+        var go = bucketComp.gameObject;
+
+        Undo.RegisterFullObjectHierarchyUndo(go, "Build Procedural Bucket");
+
+        // Unit scale so mesh units == world units (predictable size).
+        go.transform.localScale = Vector3.one;
+
+        var mf = go.GetComponent<MeshFilter>();   if (mf == null) mf = Undo.AddComponent<MeshFilter>(go);
+        var mr = go.GetComponent<MeshRenderer>(); if (mr == null) mr = Undo.AddComponent<MeshRenderer>(go);
+
+        // Hide any leftover child renderers from the old imported model.
+        foreach (var childMr in go.GetComponentsInChildren<MeshRenderer>(true))
+            if (childMr.gameObject != go) childMr.enabled = false;
+
+        // Semi-transparent, double-sided URP material so the liquid inside stays visible.
+        var sh = Shader.Find("Universal Render Pipeline/Lit");
+        var mat = new Material(sh);
+        mat.SetFloat("_Surface", 1f);                 // transparent
+        mat.SetFloat("_Blend", 0f);                   // alpha blend
+        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_ZWrite", 0f);
+        mat.SetFloat("_Cull", 0f);                    // double-sided
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        mat.SetColor("_BaseColor", new Color(0.55f, 0.62f, 0.72f, 0.35f));
+        mr.sharedMaterial = mat;
+
+        // Add the generator and wire it to the bucket's fluid.
+        var pb = go.GetComponent<ProceduralBucket>(); if (pb == null) pb = Undo.AddComponent<ProceduralBucket>(go);
+        if (pb.fluid == null)
+            foreach (var f in Object.FindObjectsByType<SphFluid>(FindObjectsSortMode.None))
+                if (f.containerShape == SphFluid.ContainerShape.Cylinder) { pb.fluid = f; break; }
+
+        // Make the liquid nearly incompressible so it does NOT collapse into a smaller blob after
+        // spawning (the realistic look). Affordable now the bucket holds far fewer particles: we
+        // raise stiffness and take smaller, more numerous sub-steps for stability.
+        if (pb.fluid != null)
+        {
+            pb.fluid.stiffness = 8f;      // firmer than the default 3, but stable when the bucket swings
+            pb.fluid.timeStep = 0.003f;
+            pb.fluid.maxSubSteps = 6;
+        }
+        pb.Rebuild();
+
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Selection.activeGameObject = go;
+        Debug.Log("[Bucket] Built a procedural transparent bucket (open cylinder) and matched the SPH " +
+                  "container to it. Tune Top/Bottom Radius + Height on the ProceduralBucket component.", go);
+    }
+
     // A "Paint Color" row: a left label plus a strip of clickable preset color swatches.
     static void BuildColorSwatches(RectTransform panel, UIControlPanel ctrl, int index)
     {
@@ -1175,64 +1153,6 @@ public static class LiquidSurfaceTools
         valueText = NewLabel(panel, value.ToString(fmt), pad + innerW - 90f, y, 90f, 22f, TextAnchor.MiddleRight);
         valueText.fontSize = 18;
         return NewSlider(panel, pad, y + 26f, innerW, 16f, min, max, value);
-    }
-
-    static bool TryGetBounds(GameObject go, out Bounds b)
-    {
-        b = new Bounds(go.transform.position, Vector3.zero);
-        var renderers = go.GetComponentsInChildren<Renderer>();
-        if (renderers == null || renderers.Length == 0) return false;
-        b = renderers[0].bounds;
-        for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
-        return true;
-    }
-
-    // Hand-built flat disc (triangle fan). Radius 0.5, lying in the XZ plane.
-    // Double-sided so it stays visible from any viewing angle. Saved as an asset
-    // so the reference survives scene/domain reloads.
-    static Mesh CreateOrLoadDiscMesh()
-    {
-        const string path = "Assets/Meshes/LiquidDisc.asset";
-        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
-        if (existing != null) return existing;
-
-        int seg = Mathf.Max(8, DiscSegments);
-        var verts = new Vector3[seg + 2];
-        var normals = new Vector3[seg + 2];
-        var uvs = new Vector2[seg + 2];
-
-        verts[0] = Vector3.zero;            // center vertex
-        normals[0] = Vector3.up;
-        uvs[0] = new Vector2(0.5f, 0.5f);
-        for (int i = 0; i <= seg; i++)
-        {
-            float a = (i / (float)seg) * Mathf.PI * 2f;
-            float cx = Mathf.Cos(a), cz = Mathf.Sin(a);
-            verts[i + 1] = new Vector3(cx * 0.5f, 0f, cz * 0.5f); // radius 0.5
-            normals[i + 1] = Vector3.up;
-            uvs[i + 1] = new Vector2(cx * 0.5f + 0.5f, cz * 0.5f + 0.5f);
-        }
-
-        var tris = new int[seg * 6];
-        int t = 0;
-        for (int i = 1; i <= seg; i++)
-        {
-            tris[t++] = 0; tris[t++] = i;     tris[t++] = i + 1; // top face
-            tris[t++] = 0; tris[t++] = i + 1; tris[t++] = i;     // bottom face (reversed)
-        }
-
-        var mesh = new Mesh { name = "LiquidDisc" };
-        mesh.vertices = verts;
-        mesh.normals = normals;
-        mesh.uv = uvs;
-        mesh.triangles = tris;
-        mesh.RecalculateBounds();
-
-        if (!AssetDatabase.IsValidFolder("Assets/Meshes"))
-            AssetDatabase.CreateFolder("Assets", "Meshes");
-        AssetDatabase.CreateAsset(mesh, path);
-        AssetDatabase.SaveAssets();
-        return mesh;
     }
 
     static Material CreatePaintMaterial()

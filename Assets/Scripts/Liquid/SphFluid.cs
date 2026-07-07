@@ -24,6 +24,15 @@ public class SphFluid : MonoBehaviour
     public float bottomLift = 0f;             // raise the analytic floor up into the bucket body (taper fix)
     public bool followBucket = true;          // Step E: container tracks the moving/tilting bucket
 
+    [Header("Manual fit — dial the analytic cylinder to the visible bucket walls")]
+    // When ON, the container uses these explicit values instead of the model's bounding box
+    // (bounds get inflated by handles / irregular shapes, which pushes the fluid past the walls).
+    // Tune them in the Inspector while watching the cyan gizmo in the Scene view, then Play.
+    public bool manualFit = false;
+    public float fitRadius = 0f;                  // 0 = auto-seeded from the bucket when Manual Fit turns on
+    public float fitHalfHeight = 0f;              // half the cylinder height (0 = auto-seed)
+    public Vector3 fitCenterLocal = Vector3.zero; // center offset in the bucket's local space
+
     public enum ContainerShape { Cylinder, Box }
     public ContainerShape containerShape = ContainerShape.Cylinder;
     public Vector3 boxHalfExtents;            // box mode: half-size (auto-filled from the container's scale)
@@ -39,6 +48,9 @@ public class SphFluid : MonoBehaviour
     public float boundaryDamping = 0.4f;     // 0 = no bounce, 1 = full bounce
     public float airResistance = 0f;         // linear drag on free-falling paint (0 = none)
     [Range(1, 8)] public int maxSubSteps = 4;
+    // Silent settling steps run at spawn so the fluid reaches its resting shape BEFORE it is ever
+    // drawn — the user never sees the initial grid collapse/settle. 0 = off.
+    public int warmupSteps = 150;
 
     [Header("Neighbor search (Step B)")]
     public float smoothingRadius = 0.2f;     // h: neighbor radius (cell size of the grid)
@@ -171,6 +183,20 @@ public class SphFluid : MonoBehaviour
                 restDensity = AverageDensity();
                 Debug.Log($"[SPH][StepC] auto restDensity = {restDensity:F1}");
             }
+
+            // Pre-settle: run the solver silently (hole closed, no drawing) so the fluid reaches its
+            // resting shape before the first visible frame — no more "spawn big, then collapse".
+            if (warmupSteps > 0)
+            {
+                bool savedHole = holeOpen;
+                holeOpen = false;
+                for (int w = 0; w < warmupSteps; w++) Step(timeStep);
+                holeOpen = savedHole;
+                // The fluid is now at rest: clear residual settling velocity so the live sim starts
+                // clean (no leftover energy that would suddenly fling particles apart).
+                for (int i = 0; i < velocities.Length; i++) velocities[i] = Vector3.zero;
+            }
+
             spawned = true;
             RenderParticles();
             return; // skip simulating on the spawn frame
@@ -259,10 +285,13 @@ public class SphFluid : MonoBehaviour
         Bounds b = rends[0].bounds;
         for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
 
-        Vector3 center = Application.isPlaying ? worldContainerCenter : b.center;
+        Vector3 center = Application.isPlaying ? worldContainerCenter
+                       : (manualFit ? bucket.TransformPoint(fitCenterLocal) : b.center);
         Vector3 up = Application.isPlaying ? worldUp : bucket.up;
-        float radius = Application.isPlaying ? containerRadius : Mathf.Min(b.size.x, b.size.z) * 0.5f * innerRadiusFactor;
-        float halfH = Application.isPlaying ? containerHalfHeight : b.size.y * 0.5f;
+        float radius = Application.isPlaying ? containerRadius
+                     : (manualFit ? fitRadius : Mathf.Min(b.size.x, b.size.z) * 0.5f * innerRadiusFactor);
+        float halfH = Application.isPlaying ? containerHalfHeight
+                    : (manualFit ? fitHalfHeight : b.size.y * 0.5f);
 
         Vector3 floor = center - up * (halfH - bottomLift);
         Vector3 top = center + up * halfH;
@@ -793,6 +822,16 @@ public class SphFluid : MonoBehaviour
         containerTopY = b.center.y + b.size.y * 0.5f;
         containerHalfHeight = b.size.y * 0.5f;
 
+        // Manual fit overrides the bounds-derived cylinder with explicit, hand-tuned values.
+        if (manualFit)
+        {
+            containerCenter = bucket.TransformPoint(fitCenterLocal);
+            containerRadius = fitRadius;
+            containerHalfHeight = fitHalfHeight;
+            containerBottomY = containerCenter.y - fitHalfHeight;
+            containerTopY = containerCenter.y + fitHalfHeight;
+        }
+
         // Express the center in bucket-local space so the cylinder can follow the bucket.
         localContainerCenter = bucket.InverseTransformPoint(containerCenter);
         worldContainerCenter = containerCenter;
@@ -800,6 +839,33 @@ public class SphFluid : MonoBehaviour
         prevBucketRot = bucket.rotation;
         worldUp = Vector3.up;
         return true;
+    }
+
+    // When Manual Fit is switched on with empty values, seed studied numbers straight from the
+    // bucket model so the user starts matched instead of guessing. Re-runnable from the context menu.
+    void OnValidate()
+    {
+        if (manualFit && bucket != null && fitHalfHeight <= 0f) SeedManualFit();
+    }
+
+    [ContextMenu("Seed Manual Fit from bucket bounds")]
+    void SeedManualFit()
+    {
+        if (bucket == null) return;
+        var rends = bucket.GetComponentsInChildren<Renderer>();
+        if (rends == null || rends.Length == 0) return;
+        Bounds b = rends[0].bounds;
+        for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+
+        // Radius: the smaller horizontal half-size, shrunk by innerRadiusFactor for wall thickness.
+        fitRadius = Mathf.Min(b.size.x, b.size.z) * 0.5f * innerRadiusFactor;
+        // Height: cap at ~2x the radius so a tall handle sticking up out of the bounds does not
+        // stretch the cylinder above the rim (a bucket is rarely taller than its own diameter).
+        fitHalfHeight = Mathf.Min(b.size.y * 0.5f, fitRadius * 2f);
+        // Center: the model's centre, but lowered by whatever height we trimmed so the floor stays put.
+        Vector3 worldCenter = b.center - Vector3.up * (b.size.y * 0.5f - fitHalfHeight);
+        fitCenterLocal = bucket.InverseTransformPoint(worldCenter);
+        Debug.Log($"[SPH] Seeded Manual Fit: radius={fitRadius:F3}, halfHeight={fitHalfHeight:F3}, centerLocal={fitCenterLocal}");
     }
 
     void EnsureMaterial()

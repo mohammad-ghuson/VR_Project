@@ -11,17 +11,20 @@ public class BucketTilt : MonoBehaviour
     [Tooltip("Hard limit on tilt angle (degrees) to keep liquid clipping reasonable.")]
     public float maxTilt = 45f;
 
-    Vector3 pivot;            // Bucket.cs swings around its initial position
+    Bucket bucket;            // read the real (possibly lifted) pivot from here
     Quaternion baseRotation;  // the bucket's upright orientation
 
     void Start()
     {
         baseRotation = transform.rotation;
-        pivot = transform.position; // captured before Bucket.cs moves it
+        bucket = GetComponent<Bucket>();
     }
 
     void LateUpdate()
     {
+        // Use the bucket's actual suspension point (includes Pivot Lift), so the tilt aligns the
+        // bucket with the real rope direction and its rim stays attached to the rope end.
+        Vector3 pivot = bucket != null ? bucket.PivotWorld : transform.position;
         Vector3 toPivot = pivot - transform.position;
         if (toPivot.sqrMagnitude < 1e-8f) { transform.rotation = baseRotation; return; }
 
