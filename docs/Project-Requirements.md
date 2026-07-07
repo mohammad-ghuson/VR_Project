@@ -30,14 +30,14 @@ Instructor: Eng. Khaled Ismail · Final-interview weight: 18/30.
 | Start angle (زاوية البداية) | ✅ | "Release Angle" slider. |
 | Initial speed (السرعة الابتدائية) | ✅ | "Speed" (omega) slider. |
 | Motion direction (اتجاه الحركة) | 🟡 | Pendulum ⇄ Circular toggle covers motion *path*; no swing-plane direction control. |
-| Number of swings (عدد مرات التأرجح) | ⬜ | Not modeled — motion runs indefinitely. Could auto-stop / close hole after N swings. |
+| Number of swings (عدد مرات التأرجح) | ✅ | "Swing Count" slider (0 = unlimited). After N full swings the bucket settles at the vertical rest; the stop time is a bottom-crossing so there's no visual snap. Changing it / Reset restarts the swing. |
 
 ### Environment properties
 | Requirement | Status | Where / note |
 |---|---|---|
 | Gravity value (قيمة الجاذبية) | 🟡 | "Gravity" slider drives the FLUID. Bucket equation takes omega directly (documented decision); coupling ω=√(g/l) = future. |
-| Air resistance (مقاومة الهواء) | ⬜ | Not modeled. Easy: linear drag on particles + amplitude damping on the pendulum. |
-| Air humidity (رطوبة الهواء) | ⬜ | Not modeled. Defensible mapping: humidity ⇒ paint stays wetter ⇒ wider/softer splats (affects splat spread/edge softness). Explicitly named in the evaluation criteria. |
+| Air resistance (مقاومة الهواء) | ✅ | "Air Resistance" slider (0..1) drives both: linear drag on free-falling paint particles (terminal velocity) AND amplitude damping exp(-k·t) on the pendulum swing. 0 = none. |
+| Air humidity (رطوبة الهواء) | ✅ | "Humidity" slider (0..1). Wetter surface ⇒ each droplet spreads wider: effective splat radius = splatRadius·(1+humidity·1.5). Independent of the paint's own "Splat Width". Explicitly named in the evaluation criteria. |
 | Friction (الاحتكاك) | 🟡 | "Wall Bounce" (boundary energy loss) + viscosity (internal friction). No pendulum friction/decay. |
 
 ### Paint properties
@@ -52,8 +52,8 @@ Instructor: Eng. Khaled Ismail · Final-interview weight: 18/30.
 | Requirement | Status | Where / note |
 |---|---|---|
 | Canvas dimensions (أبعاد اللوحة) | ✅ | "Canvas Size" slider (uniform). Separate width/depth = trivial extension. |
-| Surface type: canvas/wood/metal/paper (نوع السطح) | ⬜ | Single generic surface. Plan: preset base colour/texture + absorption profile (splat width/softness/edge) per type. Named in evaluation criteria. |
-| Canvas orientation: flat/tilted (وضعية اللوحة) | ⬜ | Plane math already supports ANY orientation (analytic plane from transform) — only a UI tilt control is missing. Cheap win. |
+| Surface type: canvas/wood/metal/paper (نوع السطح) | ✅ | "Surface" cycling button. Each preset sets base colour + absorbency (edge softness + spread factor): Canvas/Wood mid, Metal beads tight & hard-edged, Paper bleeds wide & soft. Switching repaints the background (fresh surface). Named in evaluation criteria. |
+| Canvas orientation: flat/tilted (وضعية اللوحة) | ✅ | "Canvas Tilt" slider (0..60°) rotates the canvas about local X; the analytic hit-plane follows the transform, so painting works at any tilt for free. |
 
 ---
 
@@ -71,7 +71,7 @@ Instructor: Eng. Khaled Ismail · Final-interview weight: 18/30.
 → **All seven §5 outputs are DONE** (M6 completed 2026-07-06, see `reports/M6-Outputs-Reports-Report.md`).
 
 ## §6 Physics laws
-Pendulum ✅ · gravity ✅ · fluid-flow laws ✅ (from-scratch SPH) · collision/rebound ✅ (analytic walls, wall-relative reflection) · friction/air resistance 🟡 · environmental effects (wind, gravity variation, temperature/humidity, canvas shake) ⬜ (listed as *suggested*; tank Shaker covers "moving surface" idea for the tank only).
+Pendulum ✅ · gravity ✅ · fluid-flow laws ✅ (from-scratch SPH) · collision/rebound ✅ (analytic walls, wall-relative reflection) · friction/air resistance ✅ (air-resistance drag + pendulum amplitude damping; wall bounce + viscosity for friction) · environmental effects: humidity ✅ (splat spread) · surface absorbency ✅ · gravity/canvas-tilt ✅ · wind/temperature ⬜ (listed as *suggested*; tank Shaker covers "moving surface" idea for the tank only).
 
 ## §8 Project stages
 1 Study/analysis ✅ (reference study submitted) · 2 Model design ✅ (params + UI) · 3 Physics sim ✅ · 4 Painting + multi-colour ✅ · 5 Testing & improvement 🟡 = roadmap **M8** (compare with real artworks, tune values, measure performance — the ms/FPS instrumentation already serves the "measure" part).
@@ -80,7 +80,7 @@ Pendulum ✅ · gravity ✅ · fluid-flow laws ✅ (from-scratch SPH) · collisi
 Multiple buckets ⬜ · game/educational app ⬜ · video / HQ export 🟡 (PNG ✅, video ⬜) · AI painting generation ⬜ (marked Extra).
 
 ## Evaluation criteria (آلية التقييم) — mapping
-1. Reference study & proposed approach ✅ · 2. Rendering quality/speed & realism 🟡 (M8 tuning) · 3. Correct physics per object properties ✅ (SPH + analytic boundaries, verified) · 4. **Controllability of everything** — colours ✅, canvas type ⬜, canvas size ✅, bucket path 🟡, gravity ✅, humidity ⬜ → the ⬜ items here are the highest-value gaps · 5. Execution quality/team ✅ · 6. Proposing mechanisms that speed up execution ✅ (uniform-grid O(n) + half-stencil optimisation + live proof).
+1. Reference study & proposed approach ✅ · 2. Rendering quality/speed & realism 🟡 (M8 tuning) · 3. Correct physics per object properties ✅ (SPH + analytic boundaries, verified) · 4. **Controllability of everything** — colours ✅, canvas type ✅, canvas size ✅, canvas tilt ✅, bucket path 🟡 (path toggle; swing-plane direction still open), gravity ✅, air resistance ✅, humidity ✅, swing count ✅ → all evaluation-named input gaps now closed · 5. Execution quality/team ✅ · 6. Proposing mechanisms that speed up execution ✅ (uniform-grid O(n) + half-stencil optimisation + live proof).
 
 ## Constraint (ملاحظات §4)
 No Unity physics tools (RigidBody/Colliders/…) and no ready-made libraries — **fully honoured**: all motion, fluid, collision and painting logic is hand-written C# (see SPH & analytic-boundary code).
@@ -89,6 +89,6 @@ No Unity physics tools (RigidBody/Colliders/…) and no ready-made libraries —
 
 ## Gap plan (agreed order)
 1. ~~**M6 — outputs 5/6/7**~~ ✅ done 2026-07-06.
-2. **Required-inputs quick wins**: canvas tilt · air resistance · humidity (splat spread) · swing count · canvas surface type presets.
-3. **Justify-or-add**: bucket weight/radius, rope elasticity, suspension point, swing-plane direction.
-4. **M8**: realism tuning vs real artworks + performance pass + code cleanup.
+2. ~~**Required-inputs quick wins**: canvas tilt · air resistance · humidity (splat spread) · swing count · canvas surface type presets~~ ✅ done 2026-07-07 (see `reports/M7-Required-Inputs-Report.md`). **All PDF §4 evaluation-named inputs now present.**
+3. **Justify-or-add** (next): bucket weight/radius, rope elasticity, suspension point, swing-plane direction. Each is either added or given a written physical justification.
+4. **M8**: realism tuning vs real artworks + performance pass + code cleanup (superseded `LiquidController.cs` + disc menus; deprecation warnings).

@@ -582,7 +582,7 @@ public static class LiquidSurfaceTools
         var panel = ctrl.transform.Find("Panel") as RectTransform;
         if (panel == null) { Debug.LogError("[UI][M5.2] 'Panel' not found under ControlPanelUI."); return; }
         // Rebuild on re-run so tweaks (font size, ranges) re-apply cleanly.
-        foreach (var n in new[] { "RopeLengthRow", "ReleaseAngleRow", "SpeedRow" })
+        foreach (var n in new[] { "RopeLengthRow", "ReleaseAngleRow", "SpeedRow", "SwingCountRow" })
         {
             var old = panel.Find(n);
             if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
@@ -603,6 +603,10 @@ public static class LiquidSurfaceTools
         ctrl.ropeSlider  = BuildControlRow(panel, "Rope Length",   1f, 8f,  l,   0, out ctrl.ropeValue);
         ctrl.angleSlider = BuildControlRow(panel, "Release Angle", 0f, 90f, ang, 1, out ctrl.angleValue);
         ctrl.speedSlider = BuildControlRow(panel, "Speed",         0f, 3f,  spd, 2, out ctrl.speedValue);
+        // Swing count: whole numbers, 0..10 (0 = unlimited).
+        int swings = bucket != null ? bucket.swingCount : 0;
+        ctrl.swingSlider = BuildControlRow(panel, "Swing Count",   0f, 10f, swings, 3, out ctrl.swingValue);
+        ctrl.swingSlider.wholeNumbers = true;
 
         EditorUtility.SetDirty(ctrl);
         EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
@@ -631,10 +635,10 @@ public static class LiquidSurfaceTools
             if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
         }
 
-        // Indices 3..5 stack these below the physics rows (0..2 from M5.2).
-        ctrl.viscositySlider = BuildControlRow(panel, "Viscosity",     0f,    20f, fluid.viscosity,    3, out ctrl.viscosityValue);
-        ctrl.holeSlider      = BuildControlRow(panel, "Hole Diameter", 0.05f, 1f,  fluid.holeDiameter, 4, out ctrl.holeValue);
-        ctrl.splatSlider     = BuildControlRow(panel, "Splat Width",   0.05f, 0.5f, fluid.splatRadius, 5, out ctrl.splatValue);
+        // Indices 4..6 stack these below the physics rows (0..3 from M5.2: rope, angle, speed, swing).
+        ctrl.viscositySlider = BuildControlRow(panel, "Viscosity",     0f,    20f, fluid.viscosity,    4, out ctrl.viscosityValue);
+        ctrl.holeSlider      = BuildControlRow(panel, "Hole Diameter", 0.05f, 1f,  fluid.holeDiameter, 5, out ctrl.holeValue);
+        ctrl.splatSlider     = BuildControlRow(panel, "Splat Width",   0.05f, 0.5f, fluid.splatRadius, 6, out ctrl.splatValue);
 
         EditorUtility.SetDirty(ctrl);
         EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
@@ -825,33 +829,43 @@ public static class LiquidSurfaceTools
         prt.SetParent(ctrl.transform, false);
         prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
         prt.pivot = new Vector2(1f, 1f);
-        prt.anchoredPosition = new Vector2(-20f, -240f);
-        prt.sizeDelta = new Vector2(360f, 360f);   // 360 so the 336-wide rows fit with padding
-        panelGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f); // dark like the main panel -> white labels read
+        prt.anchoredPosition = new Vector2(-20f, -232f);
+        prt.sizeDelta = new Vector2(360f, 432f);   // 6 compact rows + motion button
+        panelGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f); // dark like the main panel
 
         NewLabel(prt, "Environment & Scene", 12f, 8f, 316f, 26f, TextAnchor.MiddleLeft);
 
-        // Rows live in a child container shifted below the title.
-        var rows = new GameObject("Rows", typeof(RectTransform));
-        var rrt = (RectTransform)rows.transform;
-        rrt.SetParent(prt, false);
-        rrt.anchorMin = rrt.anchorMax = new Vector2(0f, 1f);
-        rrt.pivot = new Vector2(0f, 1f);
-        rrt.anchoredPosition = new Vector2(0f, -40f);
-        rrt.sizeDelta = new Vector2(340f, 250f);
-
         var fluid = ctrl.bucketFluid;
         float canvasSize = ctrl.canvas != null ? ctrl.canvas.transform.localScale.x : 6f;
-        ctrl.gravitySlider    = BuildControlRow(rrt, "Gravity",     0f, 20f, -fluid.gravity.y,       0, out ctrl.gravityValue);
-        ctrl.bounceSlider     = BuildControlRow(rrt, "Wall Bounce", 0f, 1f,  fluid.boundaryDamping,  1, out ctrl.bounceValue);
-        ctrl.canvasSizeSlider = BuildControlRow(rrt, "Canvas Size", 2f, 10f, canvasSize,             2, out ctrl.canvasSizeValue);
+        float canvasTilt = ctrl.canvas != null ? NormalizeTiltEuler(ctrl.canvas.transform.localEulerAngles.x) : 0f;
+        const float baseY = 40f;   // below the title
+        ctrl.gravitySlider    = BuildCompactRow(prt, baseY, 0, "Gravity",         0f, 20f, -fluid.gravity.y,      out ctrl.gravityValue);
+        ctrl.bounceSlider     = BuildCompactRow(prt, baseY, 1, "Wall Bounce",     0f, 1f,  fluid.boundaryDamping, out ctrl.bounceValue,  "0.00");
+        ctrl.canvasSizeSlider = BuildCompactRow(prt, baseY, 2, "Canvas Size",     2f, 10f, canvasSize,            out ctrl.canvasSizeValue);
+        ctrl.canvasTiltSlider = BuildCompactRow(prt, baseY, 3, "Canvas Tilt",     0f, 60f, canvasTilt,            out ctrl.canvasTiltValue);
+        ctrl.airSlider        = BuildCompactRow(prt, baseY, 4, "Air Resistance",  0f, 1f,  0f,                    out ctrl.airValue,     "0.00");
+        ctrl.humiditySlider   = BuildCompactRow(prt, baseY, 5, "Humidity",        0f, 1f,  fluid.humidity,        out ctrl.humidityValue, "0.00");
 
-        ctrl.motionButton = NewButton(prt, "Motion", 12f, 300f, 336f, 36f, new Color(0.20f, 0.40f, 0.60f, 1f), out ctrl.motionLabel);
+        // Two half-width buttons share one row: Motion (left) and Surface (right).
+        float btnY = baseY + 6 * 56f + 4f;
+        ctrl.motionButton = NewButton(prt, "Motion", 12f, btnY, 160f, 36f, new Color(0.20f, 0.40f, 0.60f, 1f), out ctrl.motionLabel);
         ctrl.motionButton.name = "MotionButton";
         ctrl.motionLabel.text = ctrl.bucket != null && ctrl.bucket.useCircularMotion ? "Motion: Circular" : "Motion: Pendulum";
+        ctrl.motionLabel.fontSize = 16;
+        ctrl.motionLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+        ctrl.surfaceButton = NewButton(prt, "Surface", 188f, btnY, 160f, 36f, new Color(0.30f, 0.45f, 0.35f, 1f), out ctrl.surfaceLabel);
+        ctrl.surfaceButton.name = "SurfaceButton";
+        ctrl.surfaceLabel.text = "Surface: Canvas";
+        ctrl.surfaceLabel.fontSize = 16;
+        ctrl.surfaceLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+        // Dark panel -> make every label readable immediately (and avoid the short-rect hide bug).
+        foreach (var t in prt.GetComponentsInChildren<Text>(true))
+        { t.color = Color.white; t.verticalOverflow = VerticalWrapMode.Overflow; }
 
         if (ctrl.canvas == null)
-            Debug.LogWarning("[UI][C1] No PaintCanvas found — the Canvas Size slider will be inert until one exists.");
+            Debug.LogWarning("[UI][C1] No PaintCanvas found — the Canvas Size/Tilt sliders will be inert until one exists.");
 
         EditorUtility.SetDirty(ctrl);
         EditorSceneManager.MarkSceneDirty(ctrl.gameObject.scene);
@@ -892,40 +906,40 @@ public static class LiquidSurfaceTools
             var h = NewLabel(panel, text, 12f, y, 336f, 24f, TextAnchor.MiddleLeft);
             h.name = name; h.color = headerColor; h.fontSize = 20;
         }
-        Header("MotionHeader", "Motion", 48f);
-        Header("LiquidHeader", "Liquid", 312f);
-        Header("ColorHeader",  "Color",  576f);
+        Header("MotionHeader", "Motion", 44f);
+        Header("LiquidHeader", "Liquid", 366f);
+        Header("ColorHeader",  "Color",  614f);
 
-        // Reposition every existing row under its section header.
-        SetRowY(panel, "RopeLengthRow",   76f);
-        SetRowY(panel, "ReleaseAngleRow", 156f);
-        SetRowY(panel, "SpeedRow",        236f);
-        SetRowY(panel, "ViscosityRow",    340f);
-        SetRowY(panel, "HoleDiameterRow", 420f);
-        SetRowY(panel, "SplatWidthRow",   500f);
-        SetRowY(panel, "PaintColorRow",   604f);
-        SetRowY(panel, "RedRow",          684f);
-        SetRowY(panel, "GreenRow",        764f);
-        SetRowY(panel, "BlueRow",         844f);
-        SetRowY(panel, "ActionsRow",      924f);
-        SetRowY(panel, "SaveResetRow",    972f);
-        panel.sizeDelta = new Vector2(360f, 1020f);
+        // Reposition every existing row under its section header. Spacing is compacted to 74px
+        // so the extra Swing Count row fits without pushing Save/Reset off the bottom.
+        SetRowY(panel, "RopeLengthRow",   70f);
+        SetRowY(panel, "ReleaseAngleRow", 144f);
+        SetRowY(panel, "SpeedRow",        218f);
+        SetRowY(panel, "SwingCountRow",   292f);
+        SetRowY(panel, "ViscosityRow",    392f);
+        SetRowY(panel, "HoleDiameterRow", 466f);
+        SetRowY(panel, "SplatWidthRow",   540f);
+        SetRowY(panel, "PaintColorRow",   640f);
+        SetRowY(panel, "RedRow",          714f);
+        SetRowY(panel, "GreenRow",        788f);
+        SetRowY(panel, "BlueRow",         862f);
+        SetRowY(panel, "ActionsRow",      936f);
+        SetRowY(panel, "SaveResetRow",    984f);
+        panel.sizeDelta = new Vector2(360f, 1030f);
 
         // --- 2) Environment panel: dark theme + readable labels ---
         var env = ctrl.transform.Find("EnvPanel") as RectTransform;
         if (env != null)
         {
-            env.sizeDelta = new Vector2(360f, 360f);
+            env.sizeDelta = new Vector2(360f, 432f);
             env.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
             foreach (var t in env.GetComponentsInChildren<Text>(true))
             { t.color = Color.white; t.verticalOverflow = VerticalWrapMode.Overflow; }
+            // Motion + Surface share one half-width row; recolour without resizing (C1 sets sizes).
             var mb = env.Find("MotionButton");
-            if (mb != null)
-            {
-                mb.GetComponent<Image>().color = new Color(0.20f, 0.40f, 0.60f, 1f);
-                var mrt = (RectTransform)mb.transform;
-                mrt.sizeDelta = new Vector2(336f, 36f);
-            }
+            if (mb != null) mb.GetComponent<Image>().color = new Color(0.20f, 0.40f, 0.60f, 1f);
+            var sb2 = env.Find("SurfaceButton");
+            if (sb2 != null) sb2.GetComponent<Image>().color = new Color(0.30f, 0.45f, 0.35f, 1f);
         }
 
         // --- 3) Demo panel: make sure its labels are the blue theme (idempotent) ---
@@ -961,19 +975,19 @@ public static class LiquidSurfaceTools
         var old = ctrl.transform.Find("ComparePanel");
         if (old != null) Undo.DestroyObjectImmediate(old.gameObject);
 
-        // Below the Environment panel (which ends at -600).
+        // Below the Environment panel (top -240, height 376 -> ends at -616).
         var panelGO = new GameObject("ComparePanel", typeof(Image));
         var prt = (RectTransform)panelGO.transform;
         prt.SetParent(ctrl.transform, false);
         prt.anchorMin = prt.anchorMax = new Vector2(1f, 1f);
         prt.pivot = new Vector2(1f, 1f);
-        prt.anchoredPosition = new Vector2(-20f, -620f);
-        prt.sizeDelta = new Vector2(360f, 400f);
+        prt.anchoredPosition = new Vector2(-20f, -684f);
+        prt.sizeDelta = new Vector2(360f, 390f);
         panelGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.55f);
 
         NewLabel(prt, "Experiment Comparison", 12f, 8f, 336f, 26f, TextAnchor.MiddleLeft);
 
-        var txt = NewLabel(prt, "-", 12f, 44f, 336f, 344f, TextAnchor.UpperLeft);
+        var txt = NewLabel(prt, "-", 12f, 40f, 336f, 342f, TextAnchor.UpperLeft);
         txt.name = "ComparisonText";
         txt.fontSize = 18;
         txt.fontStyle = FontStyle.Normal;
@@ -1144,6 +1158,23 @@ public static class LiquidSurfaceTools
     {
         rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+    }
+
+    // Euler X is reported as 0..360; fold to a signed angle so a flat canvas reads 0, not 360.
+    static float NormalizeTiltEuler(float x) => x > 180f ? x - 360f : x;
+
+    // Compact labeled slider (~56px): "Label ..... value" on one line, slider under it.
+    // Used by the Environment panel, which stacks many controls in limited height.
+    static Slider BuildCompactRow(RectTransform panel, float baseY, int index, string label,
+                                  float min, float max, float value, out Text valueText, string fmt = "0.0")
+    {
+        const float rowH = 56f, innerW = 336f, pad = 12f;
+        float y = baseY + index * rowH;
+        var lbl = NewLabel(panel, label, pad, y, 230f, 22f, TextAnchor.MiddleLeft);
+        lbl.fontSize = 18;
+        valueText = NewLabel(panel, value.ToString(fmt), pad + innerW - 90f, y, 90f, 22f, TextAnchor.MiddleRight);
+        valueText.fontSize = 18;
+        return NewSlider(panel, pad, y + 26f, innerW, 16f, min, max, value);
     }
 
     static bool TryGetBounds(GameObject go, out Bounds b)

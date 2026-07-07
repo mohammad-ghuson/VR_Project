@@ -19,6 +19,7 @@ public class UIControlPanel : MonoBehaviour
     public Slider ropeSlider;  public Text ropeValue;   // bucket.l
     public Slider angleSlider; public Text angleValue;  // bucket.thetaMax
     public Slider speedSlider; public Text speedValue;  // bucket.omega
+    public Slider swingSlider; public Text swingValue;  // bucket.swingCount (0 = unlimited)
 
     [Header("M5.3 - Liquid sliders (auto-filled by the Tools menu)")]
     public Slider viscositySlider; public Text viscosityValue; // bucketFluid.viscosity
@@ -50,15 +51,22 @@ public class UIControlPanel : MonoBehaviour
     public Slider gravitySlider;    public Text gravityValue;    // fluid gravity magnitude
     public Slider bounceSlider;     public Text bounceValue;     // wall bounce (boundaryDamping)
     public Slider canvasSizeSlider; public Text canvasSizeValue; // canvas world size
+    public Slider canvasTiltSlider; public Text canvasTiltValue; // canvas tilt angle (deg)
+    public Slider airSlider;        public Text airValue;        // air resistance (0..1)
+    public Slider humiditySlider;   public Text humidityValue;   // humidity (0..1) -> splat spread
     public Button motionButton;     public Text motionLabel;     // pendulum <-> circular
+    public Button surfaceButton;    public Text surfaceLabel;    // canvas / wood / metal / paper
 
     [Header("M6.3 - Comparison (auto-filled by the Tools menu)")]
     public Text comparisonText;   // live "previous -> current" experiment table
 
     // Snapshot of the scene's authored values, captured at Start, used by Reset.
     float defL, defAngle, defOmega, defViscosity, defHole, defSplat;
-    float defGravity, defBounce, defCanvasSize;
-    Color defColor; bool defHoleOpen, defCircular;
+    float defGravity, defBounce, defCanvasSize, defCanvasTilt;
+    Color defColor; bool defHoleOpen, defCircular; int defSwing;
+
+    // Euler X comes back as 0..360; fold into a signed angle so 0 stays 0 (not 360).
+    static float NormalizeTilt(float x) => x > 180f ? x - 360f : x;
 
     // M6.3 - one experiment's inputs + results, for the comparison table.
     struct Snapshot
@@ -79,6 +87,9 @@ public class UIControlPanel : MonoBehaviour
             Bind(ropeSlider,  ropeValue,  bucket.l,        v => bucket.l        = v);
             Bind(angleSlider, angleValue, bucket.thetaMax, v => bucket.thetaMax = v);
             Bind(speedSlider, speedValue, bucket.omega,    v => bucket.omega    = v);
+            // Swing count: 0 = unlimited. Changing it restarts the swing from the beginning.
+            Bind(swingSlider, swingValue, bucket.swingCount,
+                 v => { bucket.swingCount = Mathf.RoundToInt(v); bucket.RestartSwing(); }, "0");
         }
         if (bucketFluid != null)
         {
@@ -126,8 +137,24 @@ public class UIControlPanel : MonoBehaviour
                  v => bucketFluid.boundaryDamping = v, "0.00");
         }
         if (canvas != null)
+        {
             Bind(canvasSizeSlider, canvasSizeValue, canvas.transform.localScale.x,
                  v => canvas.transform.localScale = new Vector3(v, 1f, v));
+            // Canvas tilt: rotate the whole canvas about its local X. The paint hit-test is
+            // an analytic plane derived from the transform, so it follows the tilt for free.
+            Bind(canvasTiltSlider, canvasTiltValue, NormalizeTilt(canvas.transform.localEulerAngles.x),
+                 v => canvas.transform.localRotation = Quaternion.Euler(v, 0f, 0f));
+        }
+        // Air resistance: one 0..1 slider drives both the pendulum decay and the paint drag.
+        Bind(airSlider, airValue, 0f, v =>
+        {
+            if (bucket != null) bucket.airDamping = v * 0.4f;
+            if (bucketFluid != null) bucketFluid.airResistance = v * 3f;
+        }, "0.00");
+        // Humidity: a wetter surface makes each droplet spread wider (see SphFluid.humidity).
+        Bind(humiditySlider, humidityValue, bucketFluid != null ? bucketFluid.humidity : 0f,
+             v => { if (bucketFluid != null) bucketFluid.humidity = v; }, "0.00");
+
         if (motionButton != null && bucket != null)
         {
             UpdateMotionLabel();
@@ -138,11 +165,16 @@ public class UIControlPanel : MonoBehaviour
             });
         }
 
+        // Surface type: a cycling button (canvas -> wood -> metal -> paper).
+        ApplySurface(surfaceIndex, false);   // sync label to the authored default without wiping art
+        if (surfaceButton != null)
+            surfaceButton.onClick.AddListener(() => ApplySurface((surfaceIndex + 1) % SurfaceNames.Length, true));
+
         // Remember the authored defaults so Reset can restore them.
         if (bucket != null)
         {
             defL = bucket.l; defAngle = bucket.thetaMax; defOmega = bucket.omega;
-            defCircular = bucket.useCircularMotion;
+            defCircular = bucket.useCircularMotion; defSwing = bucket.swingCount;
         }
         if (bucketFluid != null)
         {
@@ -151,7 +183,11 @@ public class UIControlPanel : MonoBehaviour
             defHoleOpen = bucketFluid.holeOpen;
             defGravity = -bucketFluid.gravity.y; defBounce = bucketFluid.boundaryDamping;
         }
-        if (canvas != null) defCanvasSize = canvas.transform.localScale.x;
+        if (canvas != null)
+        {
+            defCanvasSize = canvas.transform.localScale.x;
+            defCanvasTilt = NormalizeTilt(canvas.transform.localEulerAngles.x);
+        }
 
         if (saveButton != null && canvas != null)
             saveButton.onClick.AddListener(SaveExperiment);
@@ -260,6 +296,7 @@ public class UIControlPanel : MonoBehaviour
             if (ropeSlider  != null) ropeSlider.value  = defL;
             if (angleSlider != null) angleSlider.value = defAngle;
             if (speedSlider != null) speedSlider.value = defOmega;
+            if (swingSlider != null) swingSlider.value = defSwing;
         }
         if (bucketFluid != null)
         {
@@ -273,13 +310,46 @@ public class UIControlPanel : MonoBehaviour
             UpdateHoleLabel();
         }
         if (canvasSizeSlider != null) canvasSizeSlider.value = defCanvasSize;
+        if (canvasTiltSlider != null) canvasTiltSlider.value = defCanvasTilt;
+        if (airSlider        != null) airSlider.value        = 0f;   // authored default = no air resistance
+        if (humiditySlider   != null) humiditySlider.value   = 0f;   // authored default = dry (no extra spread)
         if (bucket != null) { bucket.useCircularMotion = defCircular; UpdateMotionLabel(); }
+        ApplySurface(0, true);   // back to the default Canvas surface (fresh)
     }
 
     void UpdateMotionLabel()
     {
         if (motionLabel != null && bucket != null)
             motionLabel.text = bucket.useCircularMotion ? "Motion: Circular" : "Motion: Pendulum";
+    }
+
+    // --- Surface type presets (canvas / wood / metal / paper) ---
+    // Each surface differs in base colour and absorbency (edge softness + paint spread).
+    static readonly string[] SurfaceNames = { "Canvas", "Wood", "Metal", "Paper" };
+    static readonly Color[]  SurfaceColors =
+    {
+        new Color(0.95f, 0.95f, 0.92f, 1f),  // Canvas - warm off-white
+        new Color(0.80f, 0.62f, 0.42f, 1f),  // Wood   - light brown
+        new Color(0.72f, 0.74f, 0.78f, 1f),  // Metal  - cool grey
+        new Color(0.98f, 0.98f, 0.98f, 1f),  // Paper  - white
+    };
+    static readonly float[] SurfaceSoftness = { 0.50f, 0.55f, 0.15f, 0.80f }; // metal hard, paper soft
+    static readonly float[] SurfaceSpread   = { 1.00f, 1.05f, 0.80f, 1.25f }; // metal beads, paper bleeds
+    int surfaceIndex = 0;
+
+    // Apply a surface preset. When clearArt is true the canvas is repainted with the new base
+    // colour (a fresh surface); when false we only sync the label/values (used at startup/Reset).
+    void ApplySurface(int idx, bool clearArt)
+    {
+        surfaceIndex = Mathf.Clamp(idx, 0, SurfaceNames.Length - 1);
+        if (canvas != null)
+        {
+            canvas.surfaceColor = SurfaceColors[surfaceIndex];
+            canvas.edgeSoftness = SurfaceSoftness[surfaceIndex];
+            if (clearArt) canvas.Clear();   // repaint the background = fresh surface
+        }
+        if (bucketFluid != null) bucketFluid.surfaceSpread = SurfaceSpread[surfaceIndex];
+        if (surfaceLabel != null) surfaceLabel.text = "Surface: " + SurfaceNames[surfaceIndex];
     }
 
     // M6.2 - save the painting AND a text report of the whole experiment (PDF output 7):
@@ -302,11 +372,14 @@ public class UIControlPanel : MonoBehaviour
             sb.AppendLine($"Release angle:      {bucket.thetaMax:0.##} deg");
             sb.AppendLine($"Speed (omega):      {bucket.omega:0.##}");
             sb.AppendLine($"Motion mode:        {(bucket.useCircularMotion ? "Circular" : "Pendulum")}");
+            sb.AppendLine($"Swing count:        {(bucket.swingCount > 0 ? bucket.swingCount.ToString() : "unlimited")}");
         }
         if (bucketFluid != null)
         {
             sb.AppendLine($"Gravity:            {-bucketFluid.gravity.y:0.##}");
             sb.AppendLine($"Wall bounce:        {bucketFluid.boundaryDamping:0.##}");
+            sb.AppendLine($"Air resistance:     {(airSlider != null ? airSlider.value : 0f):0.##}");
+            sb.AppendLine($"Humidity:           {bucketFluid.humidity:0.##}");
             sb.AppendLine($"Viscosity:          {bucketFluid.viscosity:0.##}");
             sb.AppendLine($"Hole diameter:      {bucketFluid.holeDiameter:0.##} ({(bucketFluid.holeOpen ? "open" : "closed")})");
             sb.AppendLine($"Splat width:        {bucketFluid.splatRadius:0.##}");
@@ -315,6 +388,8 @@ public class UIControlPanel : MonoBehaviour
             sb.AppendLine($"Paint amount:       {bucketFluid.ParticleCount} particles");
         }
         sb.AppendLine($"Canvas size:        {canvas.transform.localScale.x:0.##}");
+        sb.AppendLine($"Canvas tilt:        {NormalizeTilt(canvas.transform.localEulerAngles.x):0.##} deg");
+        sb.AppendLine($"Surface type:       {SurfaceNames[surfaceIndex]}");
         sb.AppendLine();
         sb.AppendLine("[Results]");
         if (bucketFluid != null)

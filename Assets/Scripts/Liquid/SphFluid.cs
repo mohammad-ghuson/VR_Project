@@ -37,6 +37,7 @@ public class SphFluid : MonoBehaviour
     public Vector3 gravity = new Vector3(0f, -9.81f, 0f);
     public float timeStep = 0.005f;
     public float boundaryDamping = 0.4f;     // 0 = no bounce, 1 = full bounce
+    public float airResistance = 0f;         // linear drag on free-falling paint (0 = none)
     [Range(1, 8)] public int maxSubSteps = 4;
 
     [Header("Neighbor search (Step B)")]
@@ -60,6 +61,12 @@ public class SphFluid : MonoBehaviour
     public PaintCanvas paintCanvas;          // escaped paint that hits this leaves a mark
     public Color paintColor = new Color(0.85f, 0.10f, 0.15f, 1f);
     public float splatRadius = 0.15f;        // world-radius of each paint mark
+    // Environment humidity (0..1): a wetter surface makes the same droplet spread wider.
+    // Effective radius = splatRadius * (1 + humidity * 1.5). 0 = dry = unchanged. UI-driven.
+    public float humidity = 0f;
+    // Surface absorbency factor: how much the chosen canvas surface spreads paint
+    // (metal < 1 beads tight, paper > 1 bleeds wide). 1 = neutral. Set by the surface preset.
+    public float surfaceSpread = 1f;
 
     [Header("Display (Step F)")]
     public bool showStats = true;            // on-screen FPS + particle count
@@ -446,6 +453,8 @@ public class SphFluid : MonoBehaviour
             fVisc *= viscosity;
 
             Vector3 a = gravity + (fPress + fVisc) / density[i];
+            // Air resistance acts on paint that has left the bucket (drag toward terminal speed).
+            if (escaped[i] && airResistance > 0f) a -= airResistance * velocities[i];
             velocities[i] += a * dt;
 
             // safety clamp
@@ -462,8 +471,9 @@ public class SphFluid : MonoBehaviour
             {
                 // Escaped (free-falling) paint: leave a mark when it reaches the canvas,
                 // otherwise remove it once it falls past the despawn plane.
+                float wetSplat = splatRadius * (1f + humidity * 1.5f) * surfaceSpread;
                 if (paintCanvas != null &&
-                    paintCanvas.TryPaint(positions[i], particleRadius, paintColor, splatRadius))
+                    paintCanvas.TryPaint(positions[i], particleRadius, paintColor, wetSplat))
                 { dead[i] = true; deadCountTotal++; }
                 else if (positions[i].y < despawnBelowY)
                 { dead[i] = true; deadCountTotal++; }

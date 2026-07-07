@@ -35,21 +35,21 @@ by paint flowing out of a swinging bucket, with the user controlling all physica
   viscosity, moving-container sloshing, instanced rendering (`SphFluid.cs`).
 - **Status: physics done.** Visual = particles (a smooth fluid surface is an optional polish, M7).
 
-### M3 — Paint outflow from the bucket 🟡 (next)
+### M3 — Paint outflow from the bucket ✅
 The PDF core link: paint must **leave the bucket** through a hole.
 - Define a hole (position + diameter) at the bucket bottom/side.
 - SPH particles that reach the hole exit the container and become falling paint.
 - Outflow rate depends on: hole diameter, paint viscosity, bucket speed (per PDF section 6b).
 - **Test:** open the hole → paint streams out as the bucket swings.
 
-### M4 — Painting on the canvas ⬜ (the main deliverable)
+### M4 — Painting on the canvas ✅ (the main deliverable)
 - A canvas object (dimensions, orientation: flat/tilted, surface type).
 - When a paint particle hits the canvas → leave a colored mark (trail).
 - Trails accumulate into the final artwork (render-to-texture on the canvas).
 - Multi-color support.
 - **Test:** swinging bucket paints visible trails/patterns on the canvas.
 
-### M5 — Parameter UI ⬜
+### M5 — Parameter UI ✅
 Expose all PDF inputs in a runtime UI so the user can experiment:
 - Bucket: weight, radius, paint amount, hole diameter.
 - Suspension: rope length, elasticity, attach point.
@@ -59,7 +59,7 @@ Expose all PDF inputs in a runtime UI so the user can experiment:
 - Canvas: size, surface type, orientation.
 - **Test:** changing a slider changes the simulation live.
 
-### M6 — Outputs & reports ⬜
+### M6 — Outputs & reports ✅
 - Show the final painting; **save image** to disk.
 - Show the values used in the experiment.
 - **Compare** multiple experiments.
@@ -89,9 +89,16 @@ Expose all PDF inputs in a runtime UI so the user can experiment:
 
 ---
 
-## Where we are now
-- ✅ M1 (bucket motion) and ✅ M2 (SPH liquid) are complete.
-- 🟡 **Next: M3 — paint outflow from the bucket.**
-- Pending housekeeping: remove the superseded surface approach files
-  (`LiquidController.cs`, the disc part of `LiquidSurfaceTools.cs`); push to GitHub
-  after the liquid work is wrapped up.
+## Where we are now (updated 2026-07-07)
+- ✅ M1–M6 complete (+ transparent side tank, SPH complexity optimisation & live O(n)/O(n²)
+  proof, interview prep docs, demo preset). **All seven PDF §5 outputs are done.**
+- ✅ **All PDF §4 evaluation-named input gaps closed** (2026-07-07): canvas tilt, air
+  resistance, humidity (→ splat spread), swing count, and canvas surface-type presets
+  (canvas/wood/metal/paper). All exposed in the runtime UI and written into the saved report.
+  See `docs/reports/M7-Required-Inputs-Report.md`.
+- The authoritative compliance matrix vs the official PDF is `docs/Project-Requirements.md`.
+- 🟡 **Next:** "justify-or-add" items (bucket weight/radius, rope elasticity, suspension
+  point, swing-plane direction) — each added or given a written physical justification; then
+  M8 (realism tuning vs real artworks, performance, cleanup of the superseded surface
+  approach `LiquidController.cs` + disc menus, and the editor deprecation warnings).
+- Only the FINAL interview remains (18/30 marks).
