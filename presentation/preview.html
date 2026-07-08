@@ -1,0 +1,580 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+ body{background:#3a3f44;margin:0;font-family:'Noto Sans','Noto Sans Arabic',sans-serif;}
+ .slide{position:relative;width:1280px;height:720px;margin:24px auto;overflow:hidden;}
+ .slide *{box-sizing:border-box;}
+ p{margin:0;}
+</style></head><body>
+<div class="slide" style="background:#1F3B63">
+<div style="position:absolute;left:140px;top:92px;width:1000px;height:30px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:400;color:#C9D8ED">جامعة دمشق — كلية الهندسة المعلوماتية</span></p>
+</div>
+<div style="position:absolute;left:140px;top:126px;width:1000px;height:26px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.0px;font-weight:400;color:#9FB6D6">مادة الحقائق الافتراضية · 2025 / 2026</span></p>
+</div>
+<div style="position:absolute;left:90px;top:208px;width:1100px;height:100px;">
+<p dir="rtl" style="text-align:center;line-height:1.2"><span style="font-size:56.0px;font-weight:700;color:#FFFFFF">دلو الطلاء المتأرجح</span></p>
+</div>
+<div style="position:absolute;left:190px;top:300px;width:900px;height:26px;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:400;color:#9FB6D6">Swinging Paint Bucket</span></p>
+</div>
+<div style="position:absolute;left:140px;top:344px;width:1000px;height:34px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:400;color:#DDE7F5">دلوٌ يتأرجح، وطلاءٌ يتدفق، ولوحةٌ تُرسَم أمامكم — دون أي محرك فيزيائي جاهز</span></p>
+</div>
+<div style="position:absolute;left:565px;top:404px;width:150px;height:3px;border-radius:0px;background:#9FB6D6;"></div>
+<div style="position:absolute;left:90px;top:432px;width:1100px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#FFFFFF">محمد مروان العيشات  ·  محمد فرحان غصن  ·  محمد سمير الجاعوني</span></p>
+</div>
+<div style="position:absolute;left:90px;top:464px;width:1100px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#FFFFFF">محمد ياسر الدخل الله  ·  محمد قاسم السحوم  ·  علاء محمد الشريف</span></p>
+</div>
+<div style="position:absolute;left:190px;top:512px;width:900px;height:26px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#C9D8ED">بإشراف: المهندس خالد إسماعيل</span></p>
+</div>
+<div style="position:absolute;left:540px;top:683px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#9FB6D6">1 / 12</span></p>
+</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">ما المشروع؟</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">الفكرة في جملة واحدة</span></p>
+</div>
+<div style="position:absolute;left:650px;top:152px;width:570px;height:120px;">
+<p dir="rtl" style="text-align:right;line-height:1.3"><span style="font-size:28.0px;font-weight:700;color:#14181B">بنينا مختبرًا فيزيائيًا افتراضيًا: دلو طلاءٍ يتأرجح كالنواس، ويرسم لوحة فنية حقيقية.</span></p>
+</div>
+<div style="position:absolute;left:650px;top:292px;width:570px;height:34px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:21.3px;font-weight:400;color:#14181B">•  كل قانون حركة مكتوب بأيدينا — لا RigidBody ولا Colliders</span></p>
+</div>
+<div style="position:absolute;left:650px;top:334px;width:570px;height:34px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:21.3px;font-weight:400;color:#14181B">•  كل مدخل فيزيائي بيد المستخدم أثناء التشغيل</span></p>
+</div>
+<div style="position:absolute;left:650px;top:376px;width:570px;height:34px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:21.3px;font-weight:400;color:#14181B">•  كل تجربة تُحفَظ: صورة + تقرير + مقارنة</span></p>
+</div>
+<div style="position:absolute;left:850px;top:442px;width:370px;height:46px;border-radius:10px;background:#EDF2F9;border:1.5px solid #C6D4E8;"></div>
+<div style="position:absolute;left:850px;top:442px;width:370px;height:46px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#1F3B63">Unity · C# · SPH — from scratch</span></p>
+</div>
+<div style="position:absolute;left:60px;top:160px;width:550px;height:400px;border-radius:10px;background:#FFFFFF;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:328px;top:198px;width:14px;height:14px;border-radius:50%;background:#4A5258;"></div>
+<div style="position:absolute;left:396px;top:330px;width:64px;height:52px;border-radius:6px;background:#F6F8F7;border:2px solid #4A5258;"></div>
+<div style="position:absolute;left:402px;top:340px;width:52px;height:16px;border-radius:4px;background:#2E86AB;"></div>
+<div style="position:absolute;left:418px;top:396px;width:10px;height:10px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:394px;top:430px;width:10px;height:10px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:362px;top:462px;width:11px;height:11px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:326px;top:490px;width:12px;height:12px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:120px;top:514px;width:430px;height:24px;border-radius:4px;background:#FFFFFF;border:2px solid #4A5258;"></div>
+<div style="position:absolute;left:196px;top:520px;width:10px;height:10px;border-radius:50%;background:#7B4B94;"></div>
+<div style="position:absolute;left:246px;top:519px;width:12px;height:12px;border-radius:50%;background:#E4572E;"></div>
+<div style="position:absolute;left:298px;top:518px;width:14px;height:13px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:352px;top:519px;width:12px;height:12px;border-radius:50%;background:#F6C445;"></div>
+<div style="position:absolute;left:60px;top:570px;width:550px;height:22px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:14.7px;font-weight:400;color:#6B7480">المشهد كاملًا: تأرجحٌ في الأعلى — لوحةٌ تتلوّن في الأسفل</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">2 / 12</span></p>
+</div>
+<svg style="position:absolute;inset:0;pointer-events:none" width="1280" height="720"><line x1="200" y1="205" x2="470" y2="205" stroke="#6B7480" stroke-width="3"/><line x1="335" y1="205" x2="428" y2="332" stroke="#4A5258" stroke-width="2.5"/></svg>
+<div style="position:absolute;left:641px;top:283px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:641px;top:325px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:641px;top:367px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:841px;top:433px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:841px;top:433px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">كيف يعمل؟</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">من التأرجح إلى اللوحة — ست حلقات</span></p>
+</div>
+<div style="position:absolute;left:1107px;top:176px;width:36px;height:36px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:1107px;top:176px;width:36px;height:36px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#FFFFFF">1</span></p>
+</div>
+<div style="position:absolute;left:1035px;top:228px;width:180px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:1045px;top:228px;width:160px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">يتأرجح الدلو</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">معادلة النواس + تخامد الهواء</span></p>
+</div>
+<div style="position:absolute;left:912px;top:176px;width:36px;height:36px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:912px;top:176px;width:36px;height:36px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#FFFFFF">2</span></p>
+</div>
+<div style="position:absolute;left:840px;top:228px;width:180px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:850px;top:228px;width:160px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">يتموّج الطلاء</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">مائع SPH حقيقي داخل الدلو</span></p>
+</div>
+<div style="position:absolute;left:717px;top:176px;width:36px;height:36px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:717px;top:176px;width:36px;height:36px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#FFFFFF">3</span></p>
+</div>
+<div style="position:absolute;left:645px;top:228px;width:180px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:655px;top:228px;width:160px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">يخرج من الفتحة</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">قطر الفتحة بيد المستخدم</span></p>
+</div>
+<div style="position:absolute;left:522px;top:176px;width:36px;height:36px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:522px;top:176px;width:36px;height:36px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#FFFFFF">4</span></p>
+</div>
+<div style="position:absolute;left:450px;top:228px;width:180px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:460px;top:228px;width:160px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">تسقط القطرات</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">جاذبية ومقاومة هواء</span></p>
+</div>
+<div style="position:absolute;left:327px;top:176px;width:36px;height:36px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:327px;top:176px;width:36px;height:36px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#FFFFFF">5</span></p>
+</div>
+<div style="position:absolute;left:255px;top:228px;width:180px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:265px;top:228px;width:160px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">ترتطم باللوحة</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">تصادم تحليلي مع المستوي</span></p>
+</div>
+<div style="position:absolute;left:132px;top:176px;width:36px;height:36px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:132px;top:176px;width:36px;height:36px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#FFFFFF">6</span></p>
+</div>
+<div style="position:absolute;left:60px;top:228px;width:180px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:70px;top:228px;width:160px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">تتراكم لوحةً</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">بصمة لونية فوق بصمة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:452px;width:1160px;height:32px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:700;color:#14181B">كل حلقة في السلسلة فيزياء كتبناها بأنفسنا — لا شيء جاهز</span></p>
+</div>
+<div style="position:absolute;left:60px;top:492px;width:1160px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#6B7480">وستشاهدون السلسلة كاملة تعمل في العرض الحي</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">3 / 12</span></p>
+</div>
+<div style="position:absolute;left:1098px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:1098px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:1026px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:1036px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:903px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:903px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:831px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:841px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:708px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:708px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:636px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:646px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:513px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:513px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:441px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:451px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:318px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:318px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:246px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:256px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:123px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">6</div>
+<div style="position:absolute;left:123px;top:167px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">6</div>
+<div style="position:absolute;left:51px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">6</div>
+<div style="position:absolute;left:61px;top:219px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">6</div>
+<div style="position:absolute;left:51px;top:443px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">7</div>
+<div style="position:absolute;left:51px;top:483px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">7</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#C2410C">قلب المشروع</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">الطلاء مائعٌ حقيقي — لا خدعة بصرية</span></p>
+</div>
+<div style="position:absolute;left:680px;top:150px;width:540px;height:92px;">
+<p dir="rtl" style="text-align:right;line-height:1.35"><span style="font-size:21.3px;font-weight:400;color:#14181B">كل قطرةٍ جسيمٌ في مائع SPH — الطريقة المستخدمة في مؤثرات الأفلام — بنيناها من الصفر.</span></p>
+</div>
+<div style="position:absolute;left:680px;top:252px;width:540px;height:46px;border-radius:10px;background:#FFF3EA;border:1.5px solid #F0C9AC;"></div>
+<div style="position:absolute;left:692px;top:252px;width:516px;height:46px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#14181B">الجسيم يشعر بجيرانه: الضغط يمنع التكدّس</span></p>
+</div>
+<div style="position:absolute;left:680px;top:308px;width:540px;height:46px;border-radius:10px;background:#FFF3EA;border:1.5px solid #F0C9AC;"></div>
+<div style="position:absolute;left:692px;top:308px;width:516px;height:46px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#14181B">اللزوجة احتكاكٌ داخلي: طلاءٌ سميك أو سائلٌ رشيق</span></p>
+</div>
+<div style="position:absolute;left:680px;top:364px;width:540px;height:46px;border-radius:10px;background:#FFF3EA;border:1.5px solid #F0C9AC;"></div>
+<div style="position:absolute;left:692px;top:364px;width:516px;height:46px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#14181B">الدلو يتحرك من تحته ← فيتموّج وينسكب طبيعيًا</span></p>
+</div>
+<div style="position:absolute;left:680px;top:432px;width:540px;height:30px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">الاسم العلمي: SPH — الهيدروديناميكا الجسيمية الملسّاء (Müller 2003)</span></p>
+</div>
+<div style="position:absolute;left:60px;top:165px;width:560px;height:330px;border-radius:10px;background:#FFFFFF;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:248px;top:372px;width:17px;height:17px;border-radius:50%;background:#4FA3C7;"></div>
+<div style="position:absolute;left:274px;top:380px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:302px;top:370px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:330px;top:378px;width:17px;height:17px;border-radius:50%;background:#4FA3C7;"></div>
+<div style="position:absolute;left:358px;top:372px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:386px;top:380px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:414px;top:371px;width:17px;height:17px;border-radius:50%;background:#4FA3C7;"></div>
+<div style="position:absolute;left:260px;top:344px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:292px;top:340px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:324px;top:348px;width:17px;height:17px;border-radius:50%;background:#4FA3C7;"></div>
+<div style="position:absolute;left:356px;top:342px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:390px;top:346px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:276px;top:314px;width:17px;height:17px;border-radius:50%;background:#4FA3C7;"></div>
+<div style="position:absolute;left:312px;top:310px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:348px;top:316px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:382px;top:312px;width:17px;height:17px;border-radius:50%;background:#4FA3C7;"></div>
+<div style="position:absolute;left:300px;top:286px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:340px;top:284px;width:17px;height:17px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:332px;top:418px;width:12px;height:12px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:336px;top:446px;width:12px;height:12px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:330px;top:472px;width:13px;height:13px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:372px;top:414px;width:90px;height:20px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:14.7px;font-weight:400;color:#6B7480">الفتحة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:502px;width:560px;height:22px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:14.7px;font-weight:400;color:#6B7480">جسيمات تتدافع وتنسكب من الفتحة — لا مقاطع جاهزة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">4 / 12</span></p>
+</div>
+<svg style="position:absolute;inset:0;pointer-events:none" width="1280" height="720"><line x1="230" y1="230" x2="230" y2="400" stroke="#4A5258" stroke-width="3"/><line x1="450" y1="230" x2="450" y2="400" stroke="#4A5258" stroke-width="3"/><line x1="230" y1="400" x2="318" y2="400" stroke="#4A5258" stroke-width="3"/><line x1="362" y1="400" x2="450" y2="400" stroke="#4A5258" stroke-width="3"/></svg>
+<div style="position:absolute;left:671px;top:243px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:683px;top:243px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:671px;top:299px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:683px;top:299px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:671px;top:355px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:683px;top:355px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:671px;top:423px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">الأداء</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">أسرع بأربع مرات ونصف — والبرهان على الشاشة</span></p>
+</div>
+<div style="position:absolute;left:847px;top:150px;width:373px;height:112px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:859px;top:150px;width:349px;height:112px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:40.0px;font-weight:700;color:#1F3B63">≈ 14 ms</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">الشبكة الذكية O(n) — عند 3000 جسيم</span></p>
+</div>
+<div style="position:absolute;left:453px;top:150px;width:373px;height:112px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:465px;top:150px;width:349px;height:112px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:40.0px;font-weight:700;color:#C2410C">≈ 65 ms</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">الطريقة الساذجة O(n²) — العمل نفسه</span></p>
+</div>
+<div style="position:absolute;left:60px;top:150px;width:373px;height:112px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:72px;top:150px;width:349px;height:112px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:40.0px;font-weight:700;color:#1F3B63">PASS</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">فحص التطابق: الفيزياء لم تتغيّر</span></p>
+</div>
+<div style="position:absolute;left:660px;top:300px;width:560px;height:24px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:16.7px;font-weight:700;color:#1F3B63">الشبكة المكانية O(n)</span></p>
+</div>
+<div style="position:absolute;left:1050px;top:328px;width:170px;height:22px;border-radius:6px;background:#1F3B63;"></div>
+<div style="position:absolute;left:660px;top:362px;width:560px;height:24px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:16.7px;font-weight:700;color:#C2410C">القوة الغاشمة O(n²)</span></p>
+</div>
+<div style="position:absolute;left:450px;top:390px;width:770px;height:22px;border-radius:6px;background:#C2410C;"></div>
+<div style="position:absolute;left:60px;top:330px;width:360px;height:60px;">
+<p dir="rtl" style="text-align:right;line-height:1.3"><span style="font-size:16.0px;font-weight:400;color:#6B7480">الزمن الحقيقي المقاس للبحث عن الجيران</span></p>
+</div>
+<div style="position:absolute;left:60px;top:452px;width:1160px;height:32px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:700;color:#1F3B63">زرٌّ واحد في الواجهة يبدّل بين الطريقتين — والميلي ثانية تُقاس أمامكم مباشرة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:492px;width:1160px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#6B7480">لماذا لا نطلب أسرع من O(n)؟ لأن كل جسيم يجب أن يتحدّث مرة كل خطوة — الخطّي هو الحد الأمثل</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">5 / 12</span></p>
+</div>
+<div style="position:absolute;left:838px;top:141px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:850px;top:141px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:444px;top:141px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:456px;top:141px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:51px;top:141px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:63px;top:141px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:651px;top:291px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:1041px;top:319px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:651px;top:353px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:441px;top:381px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:51px;top:321px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:51px;top:443px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:51px;top:483px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">تحت الغطاء</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">أربعة مكوّنات — لكلٍّ مهمة واحدة</span></p>
+</div>
+<div style="position:absolute;left:936px;top:216px;width:272px;height:148px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:946px;top:216px;width:252px;height:148px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:700;color:#1F3B63">Bucket</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">يحسب التأرجح من معادلة النواس — رياضيات صرفة</span></p>
+</div>
+<div style="position:absolute;left:648px;top:216px;width:272px;height:148px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:658px;top:216px;width:252px;height:148px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:700;color:#1F3B63">SphFluid</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">يحاكي آلاف جسيمات الطلاء: ضغط ولزوجة وتموّج</span></p>
+</div>
+<div style="position:absolute;left:360px;top:216px;width:272px;height:148px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:370px;top:216px;width:252px;height:148px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:700;color:#1F3B63">PaintCanvas</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">يستقبل القطرات ويرسم اللوحة ويحفظها</span></p>
+</div>
+<div style="position:absolute;left:72px;top:216px;width:272px;height:148px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:82px;top:216px;width:252px;height:148px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:700;color:#1F3B63">UIControlPanel</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">يربط كل منزلقٍ بالفيزياء — حيًّا</span></p>
+</div>
+<div style="position:absolute;left:60px;top:428px;width:1160px;height:30px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:400;color:#14181B">فصلٌ تام بين المسؤوليات: كل مكوّن يُفحَص ويُشرَح وحده</span></p>
+</div>
+<div style="position:absolute;left:60px;top:468px;width:1160px;height:32px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#14181B">القيد الأساسي محترمٌ بالكامل: لا RigidBody · لا Collider · لا مكتبات جاهزة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:508px;width:1160px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#6B7480">حتى الحدود مصادمة تحليلية: أسطوانة للدلو ومستوٍ للّوحة — بالمعادلات</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">6 / 12</span></p>
+</div>
+<div style="position:absolute;left:927px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:937px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:639px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:649px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:351px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:361px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:63px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:73px;top:207px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:51px;top:419px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:51px;top:459px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">6</div>
+<div style="position:absolute;left:51px;top:499px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">6</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">التحكم</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">غيّر الفيزياء… تتغيّر اللوحة</span></p>
+</div>
+<div style="position:absolute;left:938px;top:195px;width:262px;height:100px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:948px;top:195px;width:242px;height:100px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#14181B">الدلو والطلاء</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">الكمية · قطر الفتحة · اللون · اللزوجة</span></p>
+</div>
+<div style="position:absolute;left:660px;top:195px;width:262px;height:100px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:670px;top:195px;width:242px;height:100px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#14181B">الحركة</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">زاوية البداية · السرعة · عدد التأرجحات · طول الحبل</span></p>
+</div>
+<div style="position:absolute;left:938px;top:311px;width:262px;height:100px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:948px;top:311px;width:242px;height:100px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#14181B">البيئة</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">الجاذبية · مقاومة الهواء · الرطوبة · الاحتكاك</span></p>
+</div>
+<div style="position:absolute;left:660px;top:311px;width:262px;height:100px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:670px;top:311px;width:242px;height:100px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:700;color:#14181B">اللوحة</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">الأبعاد · الميلان حتى 60° · قماش / خشب / معدن / ورق</span></p>
+</div>
+<div style="position:absolute;left:660px;top:445px;width:540px;height:28px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#4A5258">كل مدخلٍ في ملف المشروع… منزلقٌ حيٌّ أمامكم</span></p>
+</div>
+<div style="position:absolute;left:60px;top:170px;width:550px;height:330px;border-radius:10px;background:#FFFFFF;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:452px;top:221px;width:130px;height:22px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">الجاذبية</span></p>
+</div>
+<div style="position:absolute;left:330px;top:224px;width:16px;height:16px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:452px;top:275px;width:130px;height:22px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">اللزوجة</span></p>
+</div>
+<div style="position:absolute;left:210px;top:278px;width:16px;height:16px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:452px;top:329px;width:130px;height:22px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">الرطوبة</span></p>
+</div>
+<div style="position:absolute;left:390px;top:332px;width:16px;height:16px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:452px;top:383px;width:130px;height:22px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">طول الحبل</span></p>
+</div>
+<div style="position:absolute;left:262px;top:386px;width:16px;height:16px;border-radius:50%;background:#1F3B63;"></div>
+<div style="position:absolute;left:452px;top:437px;width:130px;height:22px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:15.3px;font-weight:400;color:#4A5258">اللون</span></p>
+</div>
+<div style="position:absolute;left:160px;top:430px;width:24px;height:24px;border-radius:50%;background:#E4572E;"></div>
+<div style="position:absolute;left:206px;top:430px;width:24px;height:24px;border-radius:50%;background:#2E86AB;"></div>
+<div style="position:absolute;left:252px;top:430px;width:24px;height:24px;border-radius:50%;background:#F6C445;"></div>
+<div style="position:absolute;left:298px;top:430px;width:24px;height:24px;border-radius:50%;background:#7B4B94;"></div>
+<div style="position:absolute;left:60px;top:508px;width:550px;height:22px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:14.7px;font-weight:400;color:#6B7480">لوحة التحكم الحقيقية: أكثر من عشرين منزلقًا وزرًّا حيًّا</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">7 / 12</span></p>
+</div>
+<svg style="position:absolute;inset:0;pointer-events:none" width="1280" height="720"><line x1="112" y1="232" x2="436" y2="232" stroke="#E2E5E8" stroke-width="4"/><line x1="112" y1="286" x2="436" y2="286" stroke="#E2E5E8" stroke-width="4"/><line x1="112" y1="340" x2="436" y2="340" stroke="#E2E5E8" stroke-width="4"/><line x1="112" y1="394" x2="436" y2="394" stroke="#E2E5E8" stroke-width="4"/></svg>
+<div style="position:absolute;left:929px;top:186px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:939px;top:186px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:651px;top:186px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:661px;top:186px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:929px;top:302px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:939px;top:302px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:651px;top:302px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:661px;top:302px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:651px;top:436px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">المخرجات</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">كل تجربة توثّق نفسها</span></p>
+</div>
+<div style="position:absolute;left:847px;top:165px;width:373px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:857px;top:165px;width:353px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:22.7px;font-weight:700;color:#1F3B63">صورة PNG</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">اللوحة النهائية تُحفَظ إلى ملف بنقرة واحدة</span></p>
+</div>
+<div style="position:absolute;left:453px;top:165px;width:373px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:463px;top:165px;width:353px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:22.7px;font-weight:700;color:#1F3B63">تقرير نصي</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">كل المدخلات + زمن الحركة + عدد الآثار + مساحة الانتشار</span></p>
+</div>
+<div style="position:absolute;left:60px;top:165px;width:373px;height:150px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:70px;top:165px;width:353px;height:150px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:22.7px;font-weight:700;color:#1F3B63">مقارنة حية</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:16.7px;font-weight:400;color:#4A5258">التجربة السابقة مقابل الحالية — جنبًا إلى جنب</span></p>
+</div>
+<div style="position:absolute;left:60px;top:380px;width:1160px;height:32px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:20.0px;font-weight:400;color:#14181B">وعلى الشاشة دائمًا: قيم التجربة الجارية لحظةً بلحظة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:430px;width:1160px;height:34px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:22.7px;font-weight:700;color:#1F3B63">المخرجات السبعة المطلوبة في ملف المشروع — منفّذة كلها</span></p>
+</div>
+<div style="position:absolute;left:60px;top:472px;width:1160px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#6B7480">عرض ثلاثي الأبعاد · رسم حي · لوحة نهائية · حفظ · قيم · مقارنة · تقرير</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">8 / 12</span></p>
+</div>
+<div style="position:absolute;left:838px;top:156px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:848px;top:156px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:444px;top:156px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:454px;top:156px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:51px;top:156px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:61px;top:156px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:51px;top:371px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+<div style="position:absolute;left:51px;top:421px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+<div style="position:absolute;left:51px;top:463px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">5</div>
+</div>
+<div class="slide" style="background:#152A47">
+<div style="position:absolute;left:90px;top:188px;width:1100px;height:30px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#9FB6D6">العرض الحي</span></p>
+</div>
+<div style="position:absolute;left:90px;top:248px;width:1100px;height:90px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:58.7px;font-weight:700;color:#FFFFFF">لنشاهد الدلو يرسم</span></p>
+</div>
+<div style="position:absolute;left:90px;top:368px;width:1100px;height:36px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:21.3px;font-weight:400;color:#DDE7F5">لوحة بعدة ألوان  ·  رطوبة أعلى فبقعٌ أوسع  ·  برهان O(n) أمامكم</span></p>
+</div>
+<div style="position:absolute;left:490px;top:560px;width:300px;height:46px;border-radius:10px;border:1.5px solid #9FB6D6;"></div>
+<div style="position:absolute;left:490px;top:560px;width:300px;height:46px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="ltr" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:700;color:#FFFFFF">Unity · SampleScene</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#9FB6D6">9 / 12</span></p>
+</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:60px;top:38px;width:1160px;height:26px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">خيارات نمذجة صادقة</span></p>
+</div>
+<div style="position:absolute;left:60px;top:66px;width:1160px;height:50px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:36.0px;font-weight:700;color:#14181B">بسيطٌ وصحيح خيرٌ من معقّدٍ خاطئ</span></p>
+</div>
+<div style="position:absolute;left:660px;top:170px;width:560px;height:120px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:672px;top:180px;width:536px;height:102px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">وزن الدلو</span></p>
+<p dir="rtl" style="text-align:right;line-height:1.3"><span style="font-size:17.3px;font-weight:400;color:#4A5258">دور النواس البسيط مستقلٌّ عن الكتلة — فلا منزلق وزنٍ زائف. فيزياء، لا نسيان.</span></p>
+</div>
+<div style="position:absolute;left:660px;top:306px;width:560px;height:120px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:672px;top:316px;width:536px;height:102px;">
+<p dir="rtl" style="text-align:right;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#1F3B63">الحبل</span></p>
+<p dir="rtl" style="text-align:right;line-height:1.3"><span style="font-size:17.3px;font-weight:400;color:#4A5258">قضيبٌ صلب اليوم — والحبل المرن موثَّق كعمل مستقبلي، لا مُدَّعى.</span></p>
+</div>
+<div style="position:absolute;left:60px;top:170px;width:560px;height:256px;border-radius:10px;background:#EDF2F9;border:1.5px solid #C6D4E8;"></div>
+<div style="position:absolute;left:84px;top:190px;width:512px;height:220px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.4"><span style="font-size:26.7px;font-weight:700;color:#1F3B63">«كل تبسيطٍ مدوَّنٌ كتابةً</span></p>
+<p dir="rtl" style="text-align:center;line-height:1.4"><span style="font-size:26.7px;font-weight:700;color:#1F3B63">ومبرَّرٌ فيزيائيًا.»</span></p>
+</div>
+<div style="position:absolute;left:60px;top:470px;width:1160px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#6B7480">القادم: عدة دلاء ترسم معًا · لعبة تعليمية · تصدير فيديو · لوحات بالذكاء الاصطناعي</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">10 / 12</span></p>
+</div>
+<div style="position:absolute;left:651px;top:161px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:663px;top:171px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:651px;top:297px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:663px;top:307px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+<div style="position:absolute;left:51px;top:161px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:75px;top:181px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">3</div>
+<div style="position:absolute;left:51px;top:461px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">4</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:90px;top:205px;width:1100px;height:26px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:700;color:#1F3B63">الخلاصة</span></p>
+</div>
+<div style="position:absolute;left:150px;top:255px;width:980px;height:170px;">
+<p dir="rtl" style="text-align:center;line-height:1.4"><span style="font-size:33.3px;font-weight:700;color:#1F3B63">«لا شيء في المشهد مزيّف: من تأرجح الحبل إلى آخر قطرةٍ على اللوحة، كلُّ سلوكٍ ينبع من معادلةٍ كتبناها بأيدينا.»</span></p>
+</div>
+<div style="position:absolute;left:190px;top:445px;width:900px;height:28px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:17.3px;font-weight:400;color:#4A5258">التفاصيل والقيود موثّقة بصدقٍ في التقرير النهائي.</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">11 / 12</span></p>
+</div>
+<div style="position:absolute;left:141px;top:246px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">1</div>
+<div style="position:absolute;left:181px;top:436px;width:20px;height:20px;border-radius:50%;background:#C2410C;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:.9;z-index:9">2</div>
+</div>
+<div class="slide" style="background:#FFFFFF">
+<div style="position:absolute;left:90px;top:118px;width:1100px;height:56px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:40.0px;font-weight:700;color:#14181B">شكرًا لكم</span></p>
+</div>
+<div style="position:absolute;left:840px;top:226px;width:352px;height:64px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:840px;top:226px;width:352px;height:64px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#14181B">محمد مروان العيشات</span></p>
+</div>
+<div style="position:absolute;left:464px;top:226px;width:352px;height:64px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:464px;top:226px;width:352px;height:64px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#14181B">محمد فرحان غصن</span></p>
+</div>
+<div style="position:absolute;left:88px;top:226px;width:352px;height:64px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:88px;top:226px;width:352px;height:64px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#14181B">محمد سمير الجاعوني</span></p>
+</div>
+<div style="position:absolute;left:840px;top:310px;width:352px;height:64px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:840px;top:310px;width:352px;height:64px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#14181B">محمد ياسر الدخل الله</span></p>
+</div>
+<div style="position:absolute;left:464px;top:310px;width:352px;height:64px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:464px;top:310px;width:352px;height:64px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#14181B">محمد قاسم السحوم</span></p>
+</div>
+<div style="position:absolute;left:88px;top:310px;width:352px;height:64px;border-radius:10px;background:#F6F8F7;border:1.5px solid #E2E5E8;"></div>
+<div style="position:absolute;left:88px;top:310px;width:352px;height:64px;display:flex;flex-direction:column;justify-content:center;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:19.3px;font-weight:700;color:#14181B">علاء محمد الشريف</span></p>
+</div>
+<div style="position:absolute;left:190px;top:412px;width:900px;height:30px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:18.7px;font-weight:400;color:#4A5258">بإشراف: المهندس خالد إسماعيل</span></p>
+</div>
+<div style="position:absolute;left:90px;top:480px;width:1100px;height:70px;">
+<p dir="rtl" style="text-align:center;line-height:1.18"><span style="font-size:45.3px;font-weight:700;color:#1F3B63">أسئلتكم؟</span></p>
+</div>
+<div style="position:absolute;left:60px;top:688px;width:200px;height:20px;">
+<p dir="ltr" style="text-align:left;line-height:1.18"><span style="font-size:12.0px;font-weight:400;color:#6B7480">12 / 12</span></p>
+</div>
+</div>
+</body></html>
