@@ -17,7 +17,7 @@ public class SphFluid : MonoBehaviour
     [Header("Particles")]
     public int particleCount = 250;
     public float particleRadius = 0.05f;     // collision radius (world units)
-    public float particleVisualScale = 1.0f; // visual size multiplier
+    public float particleVisualScale = 1.6f; // visual size multiplier (>1 => particles overlap into a connected liquid)
 
     [Header("Container (auto-filled from bucket bounds at Start)")]
     public float innerRadiusFactor = 0.85f;

@@ -14,9 +14,9 @@ using UnityEngine;
 public class ProceduralBucket : MonoBehaviour
 {
     [Header("Shape (local units)")]
-    public float topRadius = 0.5f;
-    public float bottomRadius = 0.38f;
-    public float height = 1.0f;
+    public float topRadius = 0.7f;
+    public float bottomRadius = 0.53f;
+    public float height = 1.5f;
     [Range(8, 64)] public int segments = 32;
 
     [Header("Fluid match")]
@@ -32,9 +32,9 @@ public class ProceduralBucket : MonoBehaviour
     [ContextMenu("Apply Recommended Shape")]
     public void ApplyRecommendedShape()
     {
-        topRadius = 0.5f;
-        bottomRadius = 0.38f;
-        height = 1.0f;
+        topRadius = 0.7f;
+        bottomRadius = 0.53f;
+        height = 1.5f;
         segments = 32;
         fillFraction = 0.9f;
         Rebuild();
