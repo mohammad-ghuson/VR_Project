@@ -59,6 +59,11 @@ public class ProceduralBucket : MonoBehaviour
         }
         BuildInto(mesh);
         MatchFluid();
+
+        // Keep the procedural bail (paint-pail handle) in sync with the bucket size, if one is
+        // attached. It also overrides the rope attach point to the bail's apex.
+        var handle = GetComponentInChildren<BucketHandle>(true);
+        if (handle != null && handle.isActiveAndEnabled) handle.Rebuild();
     }
 
     void BuildInto(Mesh mesh)
@@ -99,9 +104,11 @@ public class ProceduralBucket : MonoBehaviour
     // pick a particle count that fills the bucket; and tell the rope where the bucket top is.
     void MatchFluid()
     {
-        // Rope attaches to the bucket's top rim centre (its real geometry).
+        // Rope attaches to the bucket's top rim centre — UNLESS a bail handle is present, in which
+        // case BucketHandle owns the attach point (the bail apex) and we must not fight it.
         var bucket = GetComponent<Bucket>();
-        if (bucket != null) bucket.ropeAttachLocal = new Vector3(0f, height * 0.5f, 0f);
+        if (bucket != null && GetComponentInChildren<BucketHandle>(true) == null)
+            bucket.ropeAttachLocal = new Vector3(0f, height * 0.5f, 0f);
 
         if (fluid == null) return;
         Vector3 sc = transform.lossyScale;

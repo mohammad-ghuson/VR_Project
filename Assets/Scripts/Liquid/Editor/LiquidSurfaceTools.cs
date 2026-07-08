@@ -935,22 +935,19 @@ public static class LiquidSurfaceTools
         var mf = go.GetComponent<MeshFilter>();   if (mf == null) mf = Undo.AddComponent<MeshFilter>(go);
         var mr = go.GetComponent<MeshRenderer>(); if (mr == null) mr = Undo.AddComponent<MeshRenderer>(go);
 
-        // Hide any leftover child renderers from the old imported model.
+        // Hide any leftover child renderers from the old imported model (but keep the bail handle).
         foreach (var childMr in go.GetComponentsInChildren<MeshRenderer>(true))
-            if (childMr.gameObject != go) childMr.enabled = false;
+            if (childMr.gameObject != go && childMr.GetComponent<BucketHandle>() == null)
+                childMr.enabled = false;
 
-        // Semi-transparent, double-sided URP material so the liquid inside stays visible.
+        // Opaque, double-sided URP material: a realistic galvanised-metal pail. Double-sided so the
+        // inner walls still show through the open top (the cylinder is a single-layer wall).
         var sh = Shader.Find("Universal Render Pipeline/Lit");
         var mat = new Material(sh);
-        mat.SetFloat("_Surface", 1f);                 // transparent
-        mat.SetFloat("_Blend", 0f);                   // alpha blend
-        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        mat.SetFloat("_ZWrite", 0f);
-        mat.SetFloat("_Cull", 0f);                    // double-sided
-        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-        mat.SetColor("_BaseColor", new Color(0.55f, 0.62f, 0.72f, 0.35f));
+        mat.SetFloat("_Cull", 0f);                                          // double-sided
+        mat.SetColor("_BaseColor", new Color(0.72f, 0.74f, 0.77f, 1f));     // galvanised light-grey metal
+        mat.SetFloat("_Metallic", 0.7f);
+        mat.SetFloat("_Smoothness", 0.55f);
         mr.sharedMaterial = mat;
 
         // Add the generator and wire it to the bucket's fluid.
@@ -974,6 +971,82 @@ public static class LiquidSurfaceTools
         Selection.activeGameObject = go;
         Debug.Log("[Bucket] Built a procedural transparent bucket (open cylinder) and matched the SPH " +
                   "container to it. Tune Top/Bottom Radius + Height on the ProceduralBucket component.", go);
+    }
+
+    [MenuItem("Tools/Liquid/Bucket - Add Handle")]
+    static void AddBucketHandle()
+    {
+        var pb = Object.FindFirstObjectByType<ProceduralBucket>();
+        if (pb == null) { Debug.LogError("[Handle] No ProceduralBucket in the scene. Build the procedural bucket first."); return; }
+
+        var existing = pb.transform.Find("BucketHandle");
+        GameObject go;
+        if (existing != null) go = existing.gameObject;
+        else
+        {
+            go = new GameObject("BucketHandle");
+            Undo.RegisterCreatedObjectUndo(go, "Add Bucket Handle");
+            Undo.SetTransformParent(go.transform, pb.transform, "Parent Bucket Handle");
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+        }
+
+        if (go.GetComponent<MeshFilter>()   == null) Undo.AddComponent<MeshFilter>(go);
+        if (go.GetComponent<MeshRenderer>() == null) Undo.AddComponent<MeshRenderer>(go);
+        var bh = go.GetComponent<BucketHandle>();
+        if (bh == null) bh = Undo.AddComponent<BucketHandle>(go);
+
+        // Opaque, double-sided dark-metal material (a thin tube must never cull oddly).
+        go.GetComponent<MeshRenderer>().sharedMaterial = CreateHandleMaterial();
+
+        // A real transform at the bail apex that the rope pins to. Being a child of the bucket it
+        // tilts with it automatically, so the rope is correct even in the very first rendered frame
+        // (no "snap from rim to apex" flash). BucketHandle keeps its position in sync.
+        var apexT = pb.transform.Find("RopeApex");
+        GameObject apex;
+        if (apexT != null) apex = apexT.gameObject;
+        else
+        {
+            apex = new GameObject("RopeApex");
+            Undo.RegisterCreatedObjectUndo(apex, "Add Rope Apex");
+            Undo.SetTransformParent(apex.transform, pb.transform, "Parent Rope Apex");
+        }
+        apex.transform.localPosition = new Vector3(0f, pb.height * 0.5f + bh.rise, 0f);
+        apex.transform.localRotation = Quaternion.identity;
+        apex.transform.localScale = Vector3.one;
+
+        bh.Rebuild(); // builds the bail mesh and positions the apex point
+
+        // Wire the rope to pin to the apex transform.
+        var rope = Object.FindFirstObjectByType<Rope>();
+        if (rope != null) rope.attachPoint = apex.transform;
+
+        Selection.activeGameObject = go;
+        EditorSceneManager.MarkSceneDirty(go.scene);
+        Debug.Log("[Handle] Added a procedural bail handle + apex attach point. The rope now pins to " +
+                  "the bail apex from the first frame. Tune Rise / Thickness on the BucketHandle component.", go);
+    }
+
+    // Opaque dark-metal material for the bail, saved as an asset so it survives reloads.
+    static Material CreateHandleMaterial()
+    {
+        const string path = "Assets/Materials/BucketHandle.mat";
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null) return existing;
+
+        var sh = Shader.Find("Universal Render Pipeline/Lit");
+        var mat = new Material(sh) { name = "BucketHandle" };
+        mat.SetColor("_BaseColor", new Color(0.16f, 0.16f, 0.18f, 1f));
+        mat.SetFloat("_Metallic", 0.85f);
+        mat.SetFloat("_Smoothness", 0.65f);
+        mat.SetFloat("_Cull", 0f); // double-sided
+
+        if (!AssetDatabase.IsValidFolder("Assets/Materials"))
+            AssetDatabase.CreateFolder("Assets", "Materials");
+        AssetDatabase.CreateAsset(mat, path);
+        AssetDatabase.SaveAssets();
+        return mat;
     }
 
     // A "Paint Color" row: a left label plus a strip of clickable preset color swatches.
